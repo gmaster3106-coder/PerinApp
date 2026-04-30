@@ -468,6 +468,10 @@ export default function Chat() {
   }
 
   useEffect(() => {
+    // Paywall gate — check before starting
+    const used = state.subscription?.conversations_used || 0;
+    const isPro = state.subscription?.status === 'pro';
+    if (!isPro && used >= 5) { navigate('/paywall', { replace: true }); return; }
     if (!initialized) { setInitialized(true); callClaude(true); }
     return () => { abortRef.current?.abort(); stopAudio(); };
   }, []);
@@ -487,8 +491,12 @@ export default function Chat() {
     abortRef.current?.abort();
     const duration = Math.round((Date.now() - sessionStartRef.current) / 60000);
     const msgCount = historyRef.current.filter(m => m.role === 'user').length;
-    // Require at least 2 exchanges before showing summary
     if (msgCount < 1) { navigate('/dashboard'); return; }
+
+    // Increment free usage counter
+    const used = state.subscription?.conversations_used || 0;
+    dispatch({ type: 'SET_SUBSCRIPTION', payload: { ...state.subscription, conversations_used: used + 1 } });
+
     const baseXP = Math.min((scenario?.xp || 50) + (msgCount * 3), 200);
     navigate('/summary', {
       state: {
