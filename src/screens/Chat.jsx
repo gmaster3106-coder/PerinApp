@@ -267,6 +267,18 @@ export default function Chat() {
   const [translations, setTranslations] = useState({}); // msg.id → translated text
   const loopRef = useRef(null);
 
+  // Voice gender toggle: 'auto' | 'female' | 'male'
+  const [voiceGender, setVoiceGender] = useState(() =>
+    localStorage.getItem('perin_voice_gender_pref') || 'auto'
+  );
+  function toggleGender() {
+    const next = voiceGender === 'auto' ? 'female' : voiceGender === 'female' ? 'male' : 'auto';
+    setVoiceGender(next);
+    if (next !== 'auto') localStorage.setItem('perin_voice_gender_pref', next);
+    else localStorage.removeItem('perin_voice_gender_pref');
+  }
+  const genderOverride = voiceGender !== 'auto' ? voiceGender : null;
+
   const messagesRef = useRef(null);
   const inputRef = useRef(null);
   const historyRef = useRef([]);
@@ -275,7 +287,7 @@ export default function Chat() {
 
   const { speak, stopAudio, getVoiceId } = useTTS();
   const { isRecording, startRecording, stopRecording } = useMic();
-  const voiceId = getVoiceId(dialect, lang, scenario?.title || '');
+  const voiceId = getVoiceId(dialect, lang, scenario?.title || '', genderOverride);
   const config = { lang, dialect, level, scenario, mode, nativeLang, motivation };
 
   function scrollToBottom() {
@@ -551,6 +563,13 @@ export default function Chat() {
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <button
+              onClick={toggleGender}
+              title={`Voice: ${voiceGender}`}
+              style={{ background: 'none', border: '1.5px solid var(--border)', borderRadius: '8px', fontFamily: "'DM Sans',sans-serif", fontSize: '.72rem', fontWeight: '600', color: 'var(--muted)', cursor: 'pointer', padding: '5px 9px', whiteSpace: 'nowrap' }}
+            >
+              {voiceGender === 'female' ? '♀' : voiceGender === 'male' ? '♂' : '⚡'}
+            </button>
             <button onClick={endSession} style={{ background: 'none', border: '1.5px solid var(--border)', borderRadius: '8px', fontFamily: "'DM Sans',sans-serif", fontSize: '.75rem', fontWeight: '600', color: 'var(--muted)', cursor: 'pointer', padding: '5px 11px', whiteSpace: 'nowrap' }}>End</button>
             <button className="chat-menu-btn" onClick={() => setMenuOpen(o => !o)}>
               <span></span><span></span><span></span>

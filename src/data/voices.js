@@ -22,17 +22,31 @@ export const ELEVENLABS_VOICES = {
 };
 
 const FEMALE_SCENARIOS = ['coffee','café','cafe','barista','nurse','receptionist','market','pharmacy','hair','spa','checkout','teacher','librarian','neighbor','airbnb','host','doctor','appointment','symptoms','family','mother','sister','daughter','proposal','birthday','breaking up','shopping','apartment','cooking','surprise'];
-const MALE_SCENARIOS = ['police','officer','boss','mechanic','taxi','driver','bartender','bouncer','coach','security','job interview','business','negotiating','haggling','bank','fired','car accident','stopped by','argument','confrontation','repair'];
+const MALE_SCENARIOS   = ['police','officer','boss','mechanic','taxi','driver','bartender','bouncer','coach','security','job interview','business','negotiating','haggling','bank','fired','car accident','stopped by','argument','confrontation','repair'];
 
-export function getVoiceId(dialect, lang, scenarioTitle = '') {
-  const scenario = (scenarioTitle || '').toLowerCase();
-  let gender = 'female';
-  if (MALE_SCENARIOS.some(k => scenario.includes(k))) gender = 'male';
-  else if (FEMALE_SCENARIOS.some(k => scenario.includes(k))) gender = 'female';
-  else {
-    const last = localStorage.getItem('perin_last_voice_gender') || 'male';
-    gender = last === 'male' ? 'female' : 'male';
-    localStorage.setItem('perin_last_voice_gender', gender);
+// genderOverride: 'male' | 'female' | null (auto)
+export function getVoiceId(dialect, lang, scenarioTitle = '', genderOverride = null) {
+  let gender;
+
+  if (genderOverride === 'male' || genderOverride === 'female') {
+    gender = genderOverride;
+  } else {
+    // Check user's saved preference first
+    const pref = localStorage.getItem('perin_voice_gender_pref');
+    if (pref === 'male' || pref === 'female') {
+      gender = pref;
+    } else {
+      // Auto — pick based on scenario
+      const scenario = (scenarioTitle || '').toLowerCase();
+      if (MALE_SCENARIOS.some(k => scenario.includes(k))) gender = 'male';
+      else if (FEMALE_SCENARIOS.some(k => scenario.includes(k))) gender = 'female';
+      else {
+        // Alternate for neutral scenarios
+        const last = localStorage.getItem('perin_last_voice_gender') || 'male';
+        gender = last === 'male' ? 'female' : 'male';
+        localStorage.setItem('perin_last_voice_gender', gender);
+      }
+    }
   }
 
   let voices = ELEVENLABS_VOICES[dialect] || ELEVENLABS_VOICES[lang];

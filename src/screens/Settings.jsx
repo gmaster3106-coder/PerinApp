@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext.jsx';
 import { useAuth } from '../hooks/useAuth.js';
@@ -15,9 +16,11 @@ export default function Settings() {
   const historyCount = state.history?.length || 0;
   const isLoggedIn = !!state.currentUser?.access_token;
 
-  function toggleDark() {
-    dispatch({ type: 'SET_DARK', payload: !state.dark });
-  }
+  const [voicePref, setVoicePref] = useState(
+    () => localStorage.getItem('perin_voice_gender_pref') || 'auto'
+  );
+
+  function toggleDark() { dispatch({ type: 'SET_DARK', payload: !state.dark }); }
 
   function confirmClearVocab() {
     if (!vocabCount) return;
@@ -33,17 +36,19 @@ export default function Settings() {
   }
 
   function handleSignOut() {
-    if (window.confirm('Sign out of your account?')) {
-      logout();
-      navigate('/welcome');
-    }
+    if (window.confirm('Sign out of your account?')) { logout(); navigate('/welcome'); }
   }
 
   function pickAccent(theme) {
-    const root = document.documentElement;
-    root.style.setProperty('--accent', theme.accent);
-    root.style.setProperty('--header-bg', theme.header);
+    document.documentElement.style.setProperty('--accent', theme.accent);
+    document.documentElement.style.setProperty('--header-bg', theme.header);
     localStorage.setItem('perin_accent', theme.id);
+  }
+
+  function setVoiceGender(val) {
+    if (val === 'auto') localStorage.removeItem('perin_voice_gender_pref');
+    else localStorage.setItem('perin_voice_gender_pref', val);
+    setVoicePref(val);
   }
 
   return (
@@ -65,19 +70,14 @@ export default function Settings() {
               </div>
               <div className="settings-row-right"><span className="settings-chevron">›</span></div>
             </div>
-
             {isLoggedIn && (
               <div className="settings-row clickable settings-danger" onClick={handleSignOut}>
                 <div className="settings-row-left">
                   <div className="settings-row-icon">🚪</div>
-                  <div className="settings-row-text">
-                    <strong>Sign Out</strong>
-                    <span>{state.currentUser?.email}</span>
-                  </div>
+                  <div className="settings-row-text"><strong>Sign Out</strong><span>{state.currentUser?.email}</span></div>
                 </div>
               </div>
             )}
-
             {!isLoggedIn && (
               <div className="settings-row clickable" onClick={() => dispatch({ type: 'SHOW_AUTH_MODAL' })}>
                 <div className="settings-row-left">
@@ -122,6 +122,8 @@ export default function Settings() {
         <div className="settings-section">
           <div className="settings-section-label">Appearance</div>
           <div className="settings-card">
+
+            {/* Dark mode */}
             <div className="settings-row">
               <div className="settings-row-left">
                 <div className="settings-row-icon">🌙</div>
@@ -133,6 +135,26 @@ export default function Settings() {
                 </div>
               </div>
             </div>
+
+            {/* Voice gender */}
+            <div className="settings-row">
+              <div className="settings-row-left" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '10px', width: '100%' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div className="settings-row-icon">🎤</div>
+                  <div className="settings-row-text"><strong>Default Voice</strong><span>Voice gender for AI conversations</span></div>
+                </div>
+                <div style={{ display: 'flex', gap: '8px', paddingLeft: '44px' }}>
+                  {[['auto', '⚡ Auto'], ['female', '♀ Female'], ['male', '♂ Male']].map(([val, label]) => (
+                    <button key={val} onClick={() => setVoiceGender(val)}
+                      style={{ padding: '5px 12px', borderRadius: 8, fontFamily: "'DM Sans',sans-serif", fontSize: '.78rem', fontWeight: 600, cursor: 'pointer', border: `1.5px solid ${voicePref === val ? 'var(--accent)' : 'var(--border)'}`, background: voicePref === val ? 'var(--accent)' : 'var(--card)', color: voicePref === val ? '#fff' : 'var(--muted)' }}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Accent color */}
             <div className="settings-row">
               <div className="settings-row-left" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '10px', width: '100%' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -147,6 +169,7 @@ export default function Settings() {
                 </div>
               </div>
             </div>
+
           </div>
         </div>
 
@@ -178,6 +201,8 @@ export default function Settings() {
             </div>
           </div>
         )}
+
+        {/* Data */}
         <div className="settings-section">
           <div className="settings-section-label">Data</div>
           <div className="settings-card">
