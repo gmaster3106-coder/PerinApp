@@ -150,7 +150,34 @@ export default function Settings() {
           </div>
         </div>
 
-        {/* Data */}
+        {/* Languages */}
+        {state.languages?.length > 0 && (
+          <div className="settings-section">
+            <div className="settings-section-label">Languages</div>
+            <div className="settings-card">
+              {state.languages.map((l, i) => (
+                <div key={i} className="settings-row clickable settings-danger"
+                  onClick={() => {
+                    if (window.confirm(`Remove ${l.dialect && l.dialect !== l.lang ? `${l.dialect} ${l.lang}` : l.lang}? Your progress for this language will be lost.`)) {
+                      const updated = state.languages.filter((_, idx) => idx !== i);
+                      dispatch({ type: 'SET_LANGUAGES', payload: updated });
+                      if (state.activeLang?.lang === l.lang && state.activeLang?.dialect === l.dialect) {
+                        dispatch({ type: 'SET_ACTIVE_LANG', payload: updated[0] || {} });
+                      }
+                    }
+                  }}>
+                  <div className="settings-row-left">
+                    <div className="settings-row-icon">{l.flag || '🌍'}</div>
+                    <div className="settings-row-text">
+                      <strong>{l.dialect && l.dialect !== l.lang ? `${l.dialect} ${l.lang}` : l.lang}</strong>
+                      <span>Lv {Math.floor((l.xp || 0) / 100) + 1} · {l.xp || 0} XP — tap to remove</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
         <div className="settings-section">
           <div className="settings-section-label">Data</div>
           <div className="settings-card">
