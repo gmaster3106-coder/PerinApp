@@ -1,5 +1,4 @@
 import { createContext, useContext, useReducer, useEffect, useRef } from 'react';
-import { getItem, setItem } from '../utils/storage.js';
 import { WORKER_URL, SUPABASE_URL, SUPABASE_ANON_KEY } from '../config/constants.js';
 
 const AppContext = createContext(null);
@@ -10,9 +9,19 @@ const DEFAULT_PROFILE = {
   motivation: '', milestones: [],
 };
 
-function todayStr() {
-  return new Date().toDateString();
+// Safe localStorage helpers — no utility layer
+function lsGet(key, fallback = null) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (raw === null || raw === undefined) return fallback;
+    return JSON.parse(raw);
+  } catch { return fallback; }
 }
+function lsSet(key, val) {
+  try { localStorage.setItem(key, JSON.stringify(val)); } catch { /* quota exceeded */ }
+}
+
+function todayStr() { return new Date().toDateString(); }
 
 function reducer(state, action) {
   switch (action.type) {
@@ -43,35 +52,16 @@ function reducer(state, action) {
 
     case 'AWARD_XP': {
       const amount = action.payload || 0;
-      const prev = state.profile.xp || 0;
-      return {
-        ...state,
-        profile: { ...state.profile, xp: prev + amount },
-      };
+      if (!amount) return state;
+      return { ...state, profile: { ...state.profile, xp: (state.profile.xp || 0) + amount } };
     }
 
     case 'CHECK_STREAK': {
       const today = todayStr();
       const last = state.profile.lastDate || '';
+      if (last === today) return state; // already counted today
       const yesterday = new Date(Date.now() - 86400000).toDateString();
-
-      if (last === today) {
-        // Already counted today — no change
-        return state;
-      }
-
-      let newStreak;
-      if (last === yesterday) {
-        // Consecutive day — increment
-        newStreak = (state.profile.streak || 0) + 1;
-      } else if (!last) {
-        // First ever session
-        newStreak = 1;
-      } else {
-        // Streak broken — reset
-        newStreak = 1;
-      }
-
+      const newStreak = last === yesterday ? (state.profile.streak || 0) + 1 : 1;
       return {
         ...state,
         profile: {
@@ -84,7 +74,6 @@ function reducer(state, action) {
     }
 
     case 'SHOW_AUTH_MODAL':
-      // handled by AuthModal via its own event — just a signal
       return state;
 
     case 'RESET_PROGRESS':
@@ -105,37 +94,34 @@ export function AppProvider({ children }) {
   const [state, dispatch] = useReducer(reducer, {
     currentUser: null,
     subscription: { status: 'free', conversations_used: 0 },
-    profile: getItem('perin_profile', DEFAULT_PROFILE),
-    languages: getItem('perin_languages', []),
+    profile: lsGet('perin_profile', DEFAULT_PROFILE),
+    languages: lsGet('perin_languages', []),
     activeLang: {},
-    vocab: getItem('perin_vocab', []),
-    history: getItem('perin_history', []),
+    vocab: lsGet('perin_vocab', []),
+    history: lsGet('perin_history', []),
     dark: localStorage.getItem('perin_dark') === '1',
-    lumaHistory: getItem('perin_luma_history', []),
+    lumaHistory: lsGet('perin_luma_history', []),
   });
 
   const syncTimeoutRef = useRef(null);
 
-  // Persist profile changes
-  useEffect(() => { setItem('perin_profile', state.profile); }, [state.profile]);
-  useEffect(() => { setItem('perin_languages', state.languages); }, [state.languages]);
-  useEffect(() => { setItem('perin_vocab', state.vocab); }, [state.vocab]);
-  useEffect(() => { setItem('perin_history', state.history); }, [state.history]);
-  useEffect(() => { setItem('perin_luma_history', state.lumaHistory); }, [state.lumaHistory]);
+  useEffect(() => { lsSet('perin_profile', state.profile); }, [state.profile]);
+  useEffect(() => { lsSet('perin_languages', state.languages); }, [state.languages]);
+  useEffect(() => { lsSet('perin_vocab', state.vocab); }, [state.vocab]);
+  useEffect(() => { lsSet('perin_history', state.history); }, [state.history]);
+  useEffect(() => { lsSet('perin_luma_history', state.lumaHistory); }, [state.lumaHistory]);
 
-  // Dark mode
   useEffect(() => {
     document.body.classList.toggle('dark', state.dark);
     localStorage.setItem('perin_dark', state.dark ? '1' : '0');
   }, [state.dark]);
 
-  // Cloud sync (debounced)
   const syncToCloud = () => {
     if (!state.currentUser?.access_token) return;
     if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
     syncTimeoutRef.current = setTimeout(async () => {
       try {
-        const completed = getItem('perin_completed', {});
+        const completed = lsGet('perin_completed', {});
         await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${state.currentUser.id}`, {
           method: 'PATCH',
           headers: {
@@ -154,21 +140,22 @@ export function AppProvider({ children }) {
             synced_at: new Date().toISOString(),
           }),
         });
-      } catch { /* silent fail */ }
+      } catch { /* silent */ }
     }, 3000);
   };
 
-  // Auth init
   useEffect(() => {
-    const savedAuth = getItem('perin_auth');
+    const raw = localStorage.getItem('perin_auth');
+    if (!raw) return;
+    let savedAuth;
+    try { savedAuth = JSON.parse(raw); } catch { return; }
     if (!savedAuth?.access_token) return;
     dispatch({ type: 'SET_USER', payload: savedAuth });
     fetchSubscription(savedAuth);
     if (savedAuth.refresh_token) {
       try {
         const payload = JSON.parse(atob(savedAuth.access_token.split('.')[1]));
-        const expiresAt = payload.exp * 1000;
-        if (expiresAt - Date.now() < 10 * 60 * 1000) {
+        if (payload.exp * 1000 - Date.now() < 10 * 60 * 1000) {
           fetch(SUPABASE_URL + '/auth/v1/token?grant_type=refresh_token', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', apikey: SUPABASE_ANON_KEY },
@@ -191,17 +178,16 @@ export function AppProvider({ children }) {
       const res = await fetch(`${WORKER_URL}/api/subscription`, {
         headers: { 'Authorization': `Bearer ${user.access_token}` },
       });
-      if (res.ok) {
-        const data = await res.json();
-        dispatch({ type: 'SET_SUBSCRIPTION', payload: data });
-      }
+      if (res.ok) dispatch({ type: 'SET_SUBSCRIPTION', payload: await res.json() });
     } catch { /* silent */ }
   }
 
   const isPro = () => state.subscription?.status === 'pro';
-  const value = { state, dispatch, syncToCloud, fetchSubscription, isPro };
-
-  return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
+  return (
+    <AppContext.Provider value={{ state, dispatch, syncToCloud, fetchSubscription, isPro }}>
+      {children}
+    </AppContext.Provider>
+  );
 }
 
 export function useApp() {

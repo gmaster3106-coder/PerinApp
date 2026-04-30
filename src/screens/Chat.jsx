@@ -473,7 +473,12 @@ export default function Chat() {
     const isPro = state.subscription?.status === 'pro';
     if (!isPro && used >= 5) { navigate('/paywall', { replace: true }); return; }
     if (!initialized) { setInitialized(true); callClaude(true); }
-    return () => { abortRef.current?.abort(); stopAudio(); };
+    return () => {
+      abortRef.current?.abort();
+      stopAudio();
+      // Clean up any active loop
+      if (loopRef.current) { clearTimeout(loopRef.current); loopRef.current = null; }
+    };
   }, []);
 
   async function sendMessage(text) {

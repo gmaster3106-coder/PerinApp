@@ -409,6 +409,11 @@ export default function Pressure() {
     const bonusNudge = Math.max(0, 20 - pm.totalNudges * 4);
     const xp = baseXP + bonusClean + bonusNudge;
     dispatch({ type: 'AWARD_XP', payload: xp });
+    dispatch({ type: 'CHECK_STREAK' });
+
+    // Increment free usage counter
+    const used = state.subscription?.conversations_used || 0;
+    dispatch({ type: 'SET_SUBSCRIPTION', payload: { ...state.subscription, conversations_used: used + 1 } });
 
     const scenario = PM_SCENARIOS.find(s => s.id === pm.scenarioId);
     setResults({ turns, hesitationFree, avgLat, nudges: pm.totalNudges, xp, scenario });
@@ -417,6 +422,11 @@ export default function Pressure() {
 
   // ── start session ──
   async function startSession() {
+    // Paywall gate
+    const used = state.subscription?.conversations_used || 0;
+    const isPro = state.subscription?.status === 'pro';
+    if (!isPro && used >= 5) { navigate('/paywall'); return; }
+
     const scenario = PM_SCENARIOS.find(s => s.id === scenarioId) || PM_SCENARIOS[0];
 
     Object.assign(pm, {
