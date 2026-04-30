@@ -568,7 +568,7 @@ export default function Chat() {
               title={`Voice: ${voiceGender}`}
               style={{ background: 'none', border: '1.5px solid var(--border)', borderRadius: '8px', fontFamily: "'DM Sans',sans-serif", fontSize: '.72rem', fontWeight: '600', color: 'var(--muted)', cursor: 'pointer', padding: '5px 9px', whiteSpace: 'nowrap' }}
             >
-              {voiceGender === 'female' ? '♀' : voiceGender === 'male' ? '♂' : '⚡'}
+              {voiceGender === 'female' ? 'Feminine' : voiceGender === 'male' ? 'Masculine' : 'Auto'}
             </button>
             <button onClick={endSession} style={{ background: 'none', border: '1.5px solid var(--border)', borderRadius: '8px', fontFamily: "'DM Sans',sans-serif", fontSize: '.75rem', fontWeight: '600', color: 'var(--muted)', cursor: 'pointer', padding: '5px 11px', whiteSpace: 'nowrap' }}>End</button>
             <button className="chat-menu-btn" onClick={() => setMenuOpen(o => !o)}>

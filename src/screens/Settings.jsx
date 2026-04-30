@@ -144,7 +144,7 @@ export default function Settings() {
                   <div className="settings-row-text"><strong>Default Voice</strong><span>Voice gender for AI conversations</span></div>
                 </div>
                 <div style={{ display: 'flex', gap: '8px', paddingLeft: '44px' }}>
-                  {[['auto', '⚡ Auto'], ['female', '♀ Female'], ['male', '♂ Male']].map(([val, label]) => (
+                  {[['auto', 'Auto'], ['female', 'Feminine'], ['male', 'Masculine']].map(([val, label]) => (
                     <button key={val} onClick={() => setVoiceGender(val)}
                       style={{ padding: '5px 12px', borderRadius: 8, fontFamily: "'DM Sans',sans-serif", fontSize: '.78rem', fontWeight: 600, cursor: 'pointer', border: `1.5px solid ${voicePref === val ? 'var(--accent)' : 'var(--border)'}`, background: voicePref === val ? 'var(--accent)' : 'var(--card)', color: voicePref === val ? '#fff' : 'var(--muted)' }}>
                       {label}
