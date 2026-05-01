@@ -180,7 +180,6 @@ function ConnectionsPanel({ languages }) {
   );
 }
 
-
 const MISSION_ROUTES = {
   scenario: '/scenarios', scene: '/scenes', freechat: '/chat',
   fib: '/fib', sentence: '/sentence-builder', sentence_builder: '/sentence-builder',
@@ -381,15 +380,16 @@ export default function Dashboard() {
             </div>
             <span className="dmr-arrow">›</span>
           </button>
-          <div className="dash-mode-row" style={{ opacity: '.6', cursor: 'default' }}>
+          <button className="dash-mode-row" onClick={() => navigate('/listening')}>
             <span className="dmr-icon">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>
             </span>
             <div className="dmr-text">
-              <div className="dmr-label">Listen &amp; Respond <span style={{ fontSize: '.65rem', fontWeight: '700', background: 'var(--accent)', color: '#fff', borderRadius: '5px', padding: '2px 7px', marginLeft: '6px', verticalAlign: 'middle' }}>SOON</span></div>
-              <div className="dmr-sub">Just listen and speak — no reading, no typing</div>
+              <div className="dmr-label">Listen &amp; Respond</div>
+              <div className="dmr-sub">A native speaker says something — you transcribe it. Trains your ear for real-speed speech</div>
             </div>
-          </div>
+            <span className="dmr-arrow">›</span>
+          </button>
         </div>
 
         <button className="dash-section-toggle" onClick={() => setDrillsOpen(o => !o)}>
