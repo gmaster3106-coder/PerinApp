@@ -165,6 +165,16 @@ function stripAsteriskActions(text) {
 // ─── Message components — DO NOT CHANGE LAYOUT ────────────────────────────────
 function OpeningMessage({ msg, level, lang, onPlay, onLoop, onTranslate, onSave, looping, translation }) {
   const parsed = parseOpeningMessage(msg.text);
+  const [saved, setSaved] = useState(false);
+
+  function handleSaveMessage() {
+    if (saved) return;
+    const phrase = parsed.phraseTarget || parsed.welcome || msg.text.slice(0, 60);
+    const meaning = parsed.phraseMeaning || '';
+    const didSave = saveWordToVocab(phrase, meaning, lang);
+    if (didSave) { setSaved(true); onSave?.(phrase, true); }
+  }
+
   return (
     <div className="ai-hero-card">
       <div className="ai-hero-text">
@@ -195,7 +205,9 @@ function OpeningMessage({ msg, level, lang, onPlay, onLoop, onTranslate, onSave,
         <button className={`ai-hero-btn loop-btn${looping ? ' active' : ''}`} onClick={() => onLoop(msg.text)}>
           {looping ? '⏹ Stop' : 'Loop'}
         </button>
-        <button className="ai-hero-btn">Save</button>
+        <button className="ai-hero-btn" onClick={handleSaveMessage} style={{ color: saved ? '#2e7d32' : undefined }}>
+          {saved ? '✓ Saved' : 'Save'}
+        </button>
         <button className="ai-hero-btn" onClick={() => onTranslate(msg.id, msg.text)}>
           {translation ? 'Hide' : 'Translate'}
         </button>
@@ -212,6 +224,15 @@ function OpeningMessage({ msg, level, lang, onPlay, onLoop, onTranslate, onSave,
 
 function AiMessage({ msg, level, lang, onPlay, onLoop, onTranslate, onSave, looping, translation }) {
   const cleanText = stripAsteriskActions(msg.text);
+  const [saved, setSaved] = useState(false);
+
+  function handleSaveMessage() {
+    if (saved) return;
+    const phrase = cleanText.split(/[.!?]/)[0].trim().slice(0, 80);
+    const didSave = saveWordToVocab(phrase, '', lang);
+    if (didSave) { setSaved(true); onSave?.(phrase, true); }
+  }
+
   return (
     <div className="ai-hero-card" style={{ borderLeft: '3px solid var(--accent)' }}>
       <div className="ai-hero-text">{cleanText}</div>
@@ -224,7 +245,9 @@ function AiMessage({ msg, level, lang, onPlay, onLoop, onTranslate, onSave, loop
         <button className={`ai-hero-btn loop-btn${looping ? ' active' : ''}`} onClick={() => onLoop(msg.text)}>
           {looping ? '⏹ Stop' : 'Loop'}
         </button>
-        <button className="ai-hero-btn">Save</button>
+        <button className="ai-hero-btn" onClick={handleSaveMessage} style={{ color: saved ? '#2e7d32' : undefined }}>
+          {saved ? '✓ Saved' : 'Save'}
+        </button>
         <button className="ai-hero-btn" onClick={() => onTranslate(msg.id, msg.text)}>
           {translation ? 'Hide' : 'Translate'}
         </button>
@@ -535,6 +558,20 @@ RULES:
     const dayKey = 'perin_daily_mins_' + new Date().toDateString();
     const prevMins = parseInt(localStorage.getItem(dayKey) || '0');
     localStorage.setItem(dayKey, String(prevMins + Math.max(duration, 1)));
+
+    // Add to session history
+    dispatch({
+      type: 'ADD_SESSION',
+      payload: {
+        id: Date.now(),
+        date: new Date().toISOString(),
+        lang, dialect, level,
+        scenario: scenario?.title || 'Free Chat',
+        messages: msgCount,
+        duration,
+        xp: Math.min((scenario?.xp || 50) + (msgCount * 3), 200),
+      },
+    });
 
     const baseXP = Math.min((scenario?.xp || 50) + (msgCount * 3), 200);
     navigate('/summary', {

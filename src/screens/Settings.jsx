@@ -101,10 +101,13 @@ export default function Settings() {
               </div>
               <div className="settings-row-right"><span className="settings-chevron">›</span></div>
             </div>
-            <div className="settings-row clickable">
+            <div className="settings-row clickable" onClick={() => navigate('/srs')}>
               <div className="settings-row-left">
                 <div className="settings-row-icon">📋</div>
-                <div className="settings-row-text"><strong>Session History</strong><span>{historyCount > 0 ? `${historyCount} sessions` : 'No sessions yet'}</span></div>
+                <div className="settings-row-text">
+                  <strong>Session History</strong>
+                  <span>{historyCount > 0 ? `${historyCount} session${historyCount === 1 ? '' : 's'} completed` : 'No sessions yet'}</span>
+                </div>
               </div>
               <div className="settings-row-right"><span className="settings-chevron">›</span></div>
             </div>
