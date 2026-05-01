@@ -80,6 +80,7 @@ export default function Pressure() {
     nudgeCount: 0, totalNudges: 0, micUnlocked: false,
     recentLatencies: [], currentWindowStart: 0,
     timerId: null, recorder: null, chunks: [],
+    startTime: null,
   });
   const audioRef = useRef(null);
 
@@ -404,6 +405,11 @@ export default function Pressure() {
       ? Math.round(pm.recentLatencies.reduce((a, b) => a + b, 0) / pm.recentLatencies.length / 100) / 10
       : null;
 
+    // Track daily minutes
+    const dayKey = 'perin_daily_mins_' + new Date().toDateString();
+    const prevMins = parseInt(localStorage.getItem(dayKey) || '0');
+    localStorage.setItem(dayKey, String(prevMins + Math.max(Math.round((Date.now() - (pm.startTime || Date.now())) / 60000), 1)));
+
     const baseXP = 60;
     const bonusClean = Math.min(hesitationFree * 3, 30);
     const bonusNudge = Math.max(0, 20 - pm.totalNudges * 4);
@@ -433,7 +439,7 @@ export default function Pressure() {
       active: true, scenarioId, difficulty, windowMs: DIFF_WINDOWS[difficulty],
       aiTurnCount: 0, nudgeCount: 0, totalNudges: 0, micUnlocked: false,
       conversationHistory: [], recentLatencies: [], currentWindowStart: 0,
-      timerId: null, recorder: null, chunks: [],
+      timerId: null, recorder: null, chunks: [], startTime: Date.now(),
     });
 
     pm.systemPrompt = scenario.prompt

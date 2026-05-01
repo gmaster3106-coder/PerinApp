@@ -510,6 +510,11 @@ export default function Chat() {
     const used = state.subscription?.conversations_used || 0;
     dispatch({ type: 'SET_SUBSCRIPTION', payload: { ...state.subscription, conversations_used: used + 1 } });
 
+    // Track daily minutes
+    const dayKey = 'perin_daily_mins_' + new Date().toDateString();
+    const prevMins = parseInt(localStorage.getItem(dayKey) || '0');
+    localStorage.setItem(dayKey, String(prevMins + Math.max(duration, 1)));
+
     const baseXP = Math.min((scenario?.xp || 50) + (msgCount * 3), 200);
     navigate('/summary', {
       state: {
