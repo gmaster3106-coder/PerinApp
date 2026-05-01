@@ -66,8 +66,9 @@ function buildSystemPrompt(config, vocab) {
     ? `\n\nSCENARIO: Keep the conversation about "${scenarioTitle}".`
     : '';
   const motivNote = motivation ? `\n\nLEARNER: Their reason for learning ${lang}: "${motivation}".` : '';
+  const contextNote = config.context ? `\n\nREADING CONTEXT: The learner just read this text: "${config.context.slice(0, 300)}". Discuss it naturally.` : '';
   const introText = scenarioTitle ? `You are a character in the scenario: "${scenarioTitle}". ${scenario?.desc || ''}` : '';
-  return introText + dialectNote + `\n\nLEVEL: ${(level || 'intermediate').toUpperCase()}\n${levelInstruction}` + '\n\n' + getBasePrompt(nativeLang || 'English') + scenarioGuardrail + vocabList + motivNote;
+  return introText + dialectNote + `\n\nLEVEL: ${(level || 'intermediate').toUpperCase()}\n${levelInstruction}` + '\n\n' + getBasePrompt(nativeLang || 'English') + scenarioGuardrail + vocabList + motivNote + contextNote;
 }
 
 function stripMd(t) {
@@ -316,7 +317,7 @@ export default function Chat() {
   const { speak, stopAudio, getVoiceId } = useTTS();
   const { isRecording, startRecording, stopRecording } = useMic();
   const voiceId = getVoiceId(dialect, lang, scenario?.title || '', genderOverride);
-  const config = { lang, dialect, level, scenario, mode, nativeLang, motivation };
+  const config = { lang, dialect, level, scenario, mode, nativeLang, motivation, context };
 
   function scrollToBottom() {
     if (messagesRef.current) messagesRef.current.scrollTop = messagesRef.current.scrollHeight;
@@ -390,7 +391,7 @@ export default function Chat() {
       system = buildSystemPrompt(config, state.vocab);
       const openingTrigger = mode === 'freechat'
         ? context
-          ? `We just read this text: "${context.slice(0, 200)}". Start the conversation in ${dialect} ${lang} by asking a natural question about it. One sentence only. No asterisk actions. No retention chips.`
+          ? `Ask one short natural question in ${dialect} ${lang} about the text we just read together. One sentence only, no meta-commentary, no retention chips, no asterisk actions.`
           : `Start a free conversation in ${dialect} ${lang}. One short casual greeting — no goal box, no Try saying, no retention chips.`
         : level === 'beginner'
         ? `Start the session. You MUST follow this EXACT format with these EXACT labels on separate lines:
