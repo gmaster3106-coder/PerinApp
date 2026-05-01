@@ -441,7 +441,7 @@ export default function Pressure() {
       .replace('{dialect}', dialect !== lang ? dialect : lang)
       + ` If the user hesitates, nudge them in character (short, impatient). Never correct grammar. React to meaning. After ~10 exchanges, close the scene naturally. Keep every single line under 10 words. No asterisks. No narration.`;
 
-    pm.voiceId = getVoiceId(dialect, lang, scenario.title || '');
+    pm.voiceId = getVoiceId(dialect, lang, scenario.title || '', localStorage.getItem('perin_voice_gender_pref') || null);
 
     setScenarioLabel(`${scenario.icon} ${scenario.title}`);
     setTurnLabel('');

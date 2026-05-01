@@ -188,11 +188,9 @@ function OpeningMessage({ msg, level, lang, onPlay, onLoop, onTranslate, onSave,
           {looping ? '⏹ Stop' : 'Loop'}
         </button>
         <button className="ai-hero-btn">Save</button>
-        {level === 'beginner' && (
-          <button className="ai-hero-btn" onClick={() => onTranslate(msg.id, msg.text)}>
-            {translation ? 'Hide' : 'Translate'}
-          </button>
-        )}
+        <button className="ai-hero-btn" onClick={() => onTranslate(msg.id, msg.text)}>
+          {translation ? 'Hide' : 'Translate'}
+        </button>
       </div>
       {translation && (
         <div style={{ fontSize: '.8rem', color: 'var(--muted)', fontStyle: 'italic', marginTop: 6, padding: '6px 0' }}>
@@ -218,11 +216,9 @@ function AiMessage({ msg, level, lang, onPlay, onLoop, onTranslate, onSave, loop
           {looping ? '⏹ Stop' : 'Loop'}
         </button>
         <button className="ai-hero-btn">Save</button>
-        {level === 'beginner' && (
-          <button className="ai-hero-btn" onClick={() => onTranslate(msg.id, msg.text)}>
-            {translation ? 'Hide' : 'Translate'}
-          </button>
-        )}
+        <button className="ai-hero-btn" onClick={() => onTranslate(msg.id, msg.text)}>
+          {translation ? 'Hide' : 'Translate'}
+        </button>
       </div>
       {translation && (
         <div style={{ fontSize: '.8rem', color: 'var(--muted)', fontStyle: 'italic', marginTop: 6, padding: '6px 0' }}>
@@ -566,11 +562,11 @@ export default function Chat() {
             <button
               onClick={toggleGender}
               title={`Voice: ${voiceGender}`}
-              style={{ background: 'none', border: '1.5px solid var(--border)', borderRadius: '8px', fontFamily: "'DM Sans',sans-serif", fontSize: '.72rem', fontWeight: '600', color: 'var(--muted)', cursor: 'pointer', padding: '5px 9px', whiteSpace: 'nowrap' }}
+              style={{ background: 'none', border: '1.5px solid var(--border)', borderRadius: '8px', fontFamily: "'DM Sans',sans-serif", fontSize: '.68rem', fontWeight: '600', color: 'var(--muted)', cursor: 'pointer', padding: '4px 7px', whiteSpace: 'nowrap' }}
             >
               {voiceGender === 'female' ? 'Feminine' : voiceGender === 'male' ? 'Masculine' : 'Auto'}
             </button>
-            <button onClick={endSession} style={{ background: 'none', border: '1.5px solid var(--border)', borderRadius: '8px', fontFamily: "'DM Sans',sans-serif", fontSize: '.75rem', fontWeight: '600', color: 'var(--muted)', cursor: 'pointer', padding: '5px 11px', whiteSpace: 'nowrap' }}>End</button>
+            <button onClick={endSession} style={{ background: 'none', border: '1.5px solid var(--border)', borderRadius: '8px', fontFamily: "'DM Sans',sans-serif", fontSize: '.72rem', fontWeight: '600', color: 'var(--muted)', cursor: 'pointer', padding: '4px 10px', whiteSpace: 'nowrap' }}>End</button>
             <button className="chat-menu-btn" onClick={() => setMenuOpen(o => !o)}>
               <span></span><span></span><span></span>
             </button>

@@ -51,14 +51,13 @@ export default function SessionSummary() {
 
   // Award XP and check streak on mount — only once per session
   useEffect(() => {
-    const sessionKey = `perin_xp_awarded_${Date.now().toString().slice(0, -3)}`; // per-second key
-    const alreadyAwarded = sessionStorage.getItem('perin_summary_awarded');
+    const summaryKey = `perin_summary_${xpEarned}_${messages}`;
+    const alreadyAwarded = sessionStorage.getItem(summaryKey);
     if (!alreadyAwarded) {
-      sessionStorage.setItem('perin_summary_awarded', '1');
+      sessionStorage.setItem(summaryKey, '1');
       if (xpEarned > 0) dispatch({ type: 'AWARD_XP', payload: xpEarned });
       dispatch({ type: 'CHECK_STREAK' });
     }
-    return () => { sessionStorage.removeItem('perin_summary_awarded'); };
   }, []);
 
   // Generate AI recap in background
