@@ -15,7 +15,12 @@ function getSavedVocab(lang) {
 }
 
 function normalize(str) {
-  return (str || '').toLowerCase().replace(/[¿¡.,!?;:"""'']/g, '').trim();
+  return (str || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // strip accents
+    .replace(/[¿¡.,!?;:"""'']/g, '')
+    .trim();
 }
 
 function score(typed, expected) {
