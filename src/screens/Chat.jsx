@@ -154,6 +154,14 @@ function ChipBar({ chips, lang, onSave }) {
   );
 }
 
+function stripAsteriskActions(text) {
+  return (text || '')
+    .replace(/\*[^*\n]+\*/g, '')  // remove *action* blocks
+    .replace(/[ \t]{2,}/g, ' ')   // collapse extra spaces
+    .replace(/\n{3,}/g, '\n\n')   // max 2 newlines
+    .trim();
+}
+
 // ─── Message components — DO NOT CHANGE LAYOUT ────────────────────────────────
 function OpeningMessage({ msg, level, lang, onPlay, onLoop, onTranslate, onSave, looping, translation }) {
   const parsed = parseOpeningMessage(msg.text);
@@ -176,7 +184,7 @@ function OpeningMessage({ msg, level, lang, onPlay, onLoop, onTranslate, onSave,
         )}
         {parsed.after && <div style={{ marginTop: '8px', fontSize: '.9rem', color: 'var(--muted)' }}>{parsed.after}</div>}
         {!parsed.welcome && !parsed.goal && !parsed.phraseTarget && (
-          <div>{msg.text}</div>
+          <div>{stripAsteriskActions(msg.text)}</div>
         )}
       </div>
       <div className="ai-hero-actions">
@@ -203,9 +211,10 @@ function OpeningMessage({ msg, level, lang, onPlay, onLoop, onTranslate, onSave,
 }
 
 function AiMessage({ msg, level, lang, onPlay, onLoop, onTranslate, onSave, looping, translation }) {
+  const cleanText = stripAsteriskActions(msg.text);
   return (
     <div className="ai-hero-card" style={{ borderLeft: '3px solid var(--accent)' }}>
-      <div className="ai-hero-text">{msg.text}</div>
+      <div className="ai-hero-text">{cleanText}</div>
       {msg.grammarNote && <div className="grammar-note">{msg.grammarNote}</div>}
       <div className="ai-hero-actions">
         <button className="ai-hero-btn play-btn" onClick={() => onPlay(msg.text)}>
