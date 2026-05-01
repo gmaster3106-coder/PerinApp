@@ -279,10 +279,9 @@ export default function Chat() {
   const level = sessionData.level || 'beginner';
   const scenario = sessionData.mode === 'freechat' ? null : (sessionData.scenario || null);
   const mode = sessionData.mode || 'scenario';
+  const context = sessionData.context || '';
   const nativeLang = state.profile?.native || 'English';
   const motivation = state.profile?.motivation || '';
-
-  const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -389,7 +388,9 @@ export default function Chat() {
     if (isInit) {
       system = buildSystemPrompt(config, state.vocab);
       const openingTrigger = mode === 'freechat'
-        ? `Start a free conversation in ${dialect} ${lang}. Greet the learner naturally and invite them to talk about anything they want. Keep it casual and friendly. One or two sentences max. No asterisk actions.`
+        ? context
+          ? `${context} Start the conversation in ${dialect} ${lang} by briefly referencing what we read and asking an open question about it. Keep it natural, 1-2 sentences. No asterisk actions. No retention chips in this first message.`
+          : `Start a free conversation in ${dialect} ${lang}. Greet the learner casually — one short sentence, no goal box, no "Try saying", no retention chips. Just a natural greeting.`
         : level === 'beginner'
         ? `Start the session. You MUST follow this EXACT format with these EXACT labels on separate lines:
 
