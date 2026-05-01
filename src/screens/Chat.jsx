@@ -389,8 +389,8 @@ export default function Chat() {
       system = buildSystemPrompt(config, state.vocab);
       const openingTrigger = mode === 'freechat'
         ? context
-          ? `${context} Start the conversation in ${dialect} ${lang} by briefly referencing what we read and asking an open question about it. Keep it natural, 1-2 sentences. No asterisk actions. No retention chips in this first message.`
-          : `Start a free conversation in ${dialect} ${lang}. Greet the learner casually — one short sentence, no goal box, no "Try saying", no retention chips. Just a natural greeting.`
+          ? `We just read this text: "${context.slice(0, 200)}". Start the conversation in ${dialect} ${lang} by asking a natural question about it. One sentence only. No asterisk actions. No retention chips.`
+          : `Start a free conversation in ${dialect} ${lang}. One short casual greeting — no goal box, no Try saying, no retention chips.`
         : level === 'beginner'
         ? `Start the session. You MUST follow this EXACT format with these EXACT labels on separate lines:
 
