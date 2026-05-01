@@ -72,8 +72,8 @@ function buildSystemPrompt(config, vocab) {
 
 function stripMd(t) {
   return (t || '')
+    .replace(/\*[^*]+\*/g, '')          // remove *asterisk actions*
     .replace(/\*\*(.+?)\*\*/g, '$1')
-    .replace(/\*(.+?)\*/g, '$1')
     .replace(/`(.+?)`/g, '$1')
     .replace(/^#{1,3} /gm, '')
     .replace(/\n\n/g, '\n')
@@ -204,7 +204,7 @@ function OpeningMessage({ msg, level, lang, onPlay, onLoop, onTranslate, onSave,
 
 function AiMessage({ msg, level, lang, onPlay, onLoop, onTranslate, onSave, looping, translation }) {
   return (
-    <div className="ai-hero-card">
+    <div className="ai-hero-card" style={{ borderLeft: '3px solid var(--accent)' }}>
       <div className="ai-hero-text">{msg.text}</div>
       {msg.grammarNote && <div className="grammar-note">{msg.grammarNote}</div>}
       <div className="ai-hero-actions">
