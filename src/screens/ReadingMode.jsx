@@ -203,7 +203,7 @@ Return ONLY raw JSON, no markdown:
                 Next passage →
               </button>
               <button
-                onClick={() => navigate('/chat', { state: { lang, dialect, level: activeLang?.level || 'beginner', mode: 'freechat' } })}
+                onClick={() => navigate('/chat', { state: { lang, dialect, level: activeLang?.level || 'intermediate', mode: 'freechat', scenario: null } })}
                 style={{ flex: 1, background: 'var(--card)', color: 'var(--ink)', border: '1.5px solid var(--border)', borderRadius: 12, padding: '12px', fontFamily: "'DM Sans',sans-serif", fontSize: '.85rem', fontWeight: 600, cursor: 'pointer' }}
               >
                 💬 Discuss it

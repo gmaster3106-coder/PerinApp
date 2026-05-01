@@ -277,7 +277,7 @@ export default function Chat() {
   const lang = sessionData.lang || state.languages?.[0]?.lang || 'Spanish';
   const dialect = sessionData.dialect || state.languages?.[0]?.dialect || lang;
   const level = sessionData.level || 'beginner';
-  const scenario = sessionData.scenario || null;
+  const scenario = sessionData.mode === 'freechat' ? null : (sessionData.scenario || null);
   const mode = sessionData.mode || 'scenario';
   const nativeLang = state.profile?.native || 'English';
   const motivation = state.profile?.motivation || '';
