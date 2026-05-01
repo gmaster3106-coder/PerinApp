@@ -34,7 +34,8 @@ export default function ListeningMode() {
   const activeLang = state.activeLang?.lang ? state.activeLang : languages[0];
   const lang       = activeLang?.lang    || 'Spanish';
   const dialect    = activeLang?.dialect || lang;
-  const voiceId    = getVoiceId(dialect, lang, '', localStorage.getItem('perin_voice_gender_pref') || null);
+  const voiceIdRef  = useRef(getVoiceId(dialect, lang, '', localStorage.getItem('perin_voice_gender_pref') || null));
+  const voiceId     = voiceIdRef.current;
   const langCode   = getLangCode(lang, dialect);
 
   const [phase, setPhase]         = useState('loading'); // loading | question | score | error
@@ -45,7 +46,6 @@ export default function ListeningMode() {
   const [typed, setTyped]         = useState('');
   const [feedback, setFeedback]   = useState(null); // { correct, sentence, translation }
   const [playing, setPlaying]     = useState(false);
-  const [speed, setSpeed]         = useState('clear'); // 'clear' | 'natural'
 
   const inputRef = useRef(null);
 
@@ -98,7 +98,7 @@ export default function ListeningMode() {
   // Auto-play on new question
   useEffect(() => {
     if (phase === 'question' && questions[index]) {
-      const t = setTimeout(() => playQuestion('clear'), 500);
+      const t = setTimeout(() => playQuestion(), 500);
       return () => clearTimeout(t);
     }
   }, [index, phase, questions]);
@@ -110,15 +110,12 @@ export default function ListeningMode() {
     }
   }, [index, phase, answered]);
 
-  async function playQuestion(spd) {
+  async function playQuestion() {
     const q = questions[index];
     if (!q || !voiceId) return;
     setPlaying(true);
-    setSpeed(spd);
     try {
       const token = await getValidToken();
-      // Clear speed: slow rate via text manipulation isn't easy, so we just play normally
-      // Natural speed is the same voice — the distinction is visual/psychological
       await speak({ text: q.sentence, voiceId, lang: langCode, accessToken: token });
     } finally {
       setPlaying(false);
@@ -240,28 +237,14 @@ export default function ListeningMode() {
           {/* Play button */}
           <div style={{ textAlign: 'center', padding: '28px 0 20px' }}>
             <button
-              onClick={() => playQuestion(speed)}
+              onClick={() => playQuestion()}
               style={{ width: 72, height: 72, borderRadius: '50%', background: playing ? '#ff6b00' : 'var(--accent)', border: 'none', cursor: 'pointer', fontSize: '1.8rem', color: '#fff', boxShadow: '0 4px 16px rgba(26,86,219,.35)', transition: 'all .2s' }}
             >
               {playing ? '⏵' : '🔊'}
             </button>
             <p style={{ fontSize: '.78rem', color: 'var(--muted)', marginTop: 10 }}>Tap to hear the sentence</p>
 
-            {/* Speed toggle */}
-            <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginTop: 8 }}>
-              <button
-                onClick={() => playQuestion('clear')}
-                style={{ background: speed === 'clear' ? 'var(--accent)' : 'var(--cream)', color: speed === 'clear' ? '#fff' : 'var(--muted)', border: speed === 'clear' ? 'none' : '1.5px solid var(--border)', borderRadius: 8, padding: '4px 12px', fontFamily: "'DM Sans',sans-serif", fontSize: '.72rem', fontWeight: 600, cursor: 'pointer' }}
-              >
-                🐢 Clear
-              </button>
-              <button
-                onClick={() => playQuestion('natural')}
-                style={{ background: speed === 'natural' ? 'var(--accent)' : 'var(--cream)', color: speed === 'natural' ? '#fff' : 'var(--muted)', border: speed === 'natural' ? 'none' : '1.5px solid var(--border)', borderRadius: 8, padding: '4px 12px', fontFamily: "'DM Sans',sans-serif", fontSize: '.72rem', fontWeight: 600, cursor: 'pointer' }}
-              >
-                ⚡ Natural
-              </button>
-            </div>
+
           </div>
 
           {/* Input */}
