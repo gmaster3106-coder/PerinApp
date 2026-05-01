@@ -366,7 +366,19 @@ export default function Chat() {
     if (isInit) {
       system = buildSystemPrompt(config, state.vocab);
       const openingTrigger = level === 'beginner'
-        ? `Start the session. Follow this EXACT format:\n1. One sentence in ${nativeLang} welcoming them to "${scenario?.title || 'this conversation'}".\n2. "Your goal: [specific task]"\n3. "Try saying: [KEY PHRASE IN ${dialect} ${lang}] — [${nativeLang} meaning]"\n4. One sentence inviting them to try.\nThe phrase MUST be in ${lang}.`
+        ? `Start the session. You MUST follow this EXACT format with these EXACT labels on separate lines:
+
+[One sentence in ${nativeLang} welcoming them to "${scenario?.title || 'this conversation'}"]
+Your goal: [specific task they need to accomplish]
+Try saying: [KEY PHRASE IN ${lang}] — [${nativeLang} meaning]
+[One short sentence inviting them to try]
+
+RULES:
+- "Your goal:" must be on its own line starting with exactly "Your goal:"
+- "Try saying:" must be on its own line starting with exactly "Try saying:"
+- The phrase after "Try saying:" MUST be in ${lang}, not ${nativeLang}
+- No asterisk actions
+- No bullet points`
         : level === 'intermediate'
         ? `Start the session. One sentence in ${nativeLang} stating their goal for "${scenario?.title || 'this conversation'}", then start naturally in ${dialect} ${lang}.`
         : `Start now in ${dialect} ${lang}. Natural pace. One or two sentences.`;
