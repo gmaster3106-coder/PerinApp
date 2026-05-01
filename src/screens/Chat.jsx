@@ -388,7 +388,9 @@ export default function Chat() {
     let msgs, system;
     if (isInit) {
       system = buildSystemPrompt(config, state.vocab);
-      const openingTrigger = level === 'beginner'
+      const openingTrigger = mode === 'freechat'
+        ? `Start a free conversation in ${dialect} ${lang}. Greet the learner naturally and invite them to talk about anything they want. Keep it casual and friendly. One or two sentences max. No asterisk actions.`
+        : level === 'beginner'
         ? `Start the session. You MUST follow this EXACT format with these EXACT labels on separate lines:
 
 [One sentence in ${nativeLang} welcoming them to "${scenario?.title || 'this conversation'}"]
