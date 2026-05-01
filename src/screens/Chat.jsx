@@ -282,6 +282,7 @@ export default function Chat() {
   const context = sessionData.context || '';
   const nativeLang = state.profile?.native || 'English';
   const motivation = state.profile?.motivation || '';
+  const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
