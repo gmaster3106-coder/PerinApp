@@ -499,11 +499,19 @@ RULES:
       setMessages(prev => {
         const filtered = prev.filter(m => m.role !== 'typing' && m.role !== 'streaming');
         const { mainText: parsed, chips, shadow } = parseRetention(mainText);
-        // FIX: always treat the first AI message as the opening card
         return [...filtered, { role: 'ai', text: parsed, chips, shadow, grammarNote, id: Date.now(), raw: mainText, isOpening: isInit }];
       });
 
       scrollToBottom();
+
+      // Retry opening if beginner format is missing "Try saying:"
+      if (isInit && level === 'beginner' && mode !== 'freechat' && !fullText.toLowerCase().includes('try saying')) {
+        setTimeout(() => {
+          setMessages(prev => prev.filter(m => !m.isOpening));
+          callClaude(true);
+        }, 500);
+        return;
+      }
 
       if (voiceId) {
         const first = mainText.split(/(?<=[.!?])\s+/)[0] || mainText;
