@@ -237,7 +237,7 @@ function AiMessage({ msg, level, lang, onPlay, onLoop, onTranslate, onSave, loop
 
 // ─── Main component ───────────────────────────────────────────────────────────
 export default function Chat() {
-  const { state } = useApp();
+  const { state, dispatch } = useApp();
   const navigate = useNavigate();
   const location = useLocation();
   const sessionData = location.state || {};
