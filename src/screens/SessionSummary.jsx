@@ -24,7 +24,6 @@ export default function SessionSummary() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Data passed from Chat via navigate('/summary', { state: {...} })
   const {
     xpEarned    = 0,
     duration    = 0,
@@ -33,7 +32,8 @@ export default function SessionSummary() {
     dialect     = '',
     level       = '',
     scenario    = null,
-    history     = [],    // conversationHistory array
+    idx         = null,
+    history     = [],
     flag        = '',
   } = location.state || {};
 
@@ -45,11 +45,10 @@ export default function SessionSummary() {
   const dialectLabel = dialect && dialect !== lang ? `${dialect} ${lang}` : lang;
   const scenarioLabel = scenario?.title || '';
 
-  const [recapPhrases, setRecapPhrases]   = useState(null); // null | [] | [{word,meaning,note}]
-  const [savedWords,   setSavedWords]     = useState({});   // word → true
-  const [showFull,     setShowFull]       = useState(false);
+  const [recapPhrases, setRecapPhrases]   = useState(null);
+  const [savedWords,   setSavedWords]     = useState({});
 
-  // Award XP and check streak on mount — only once per session
+  // Award XP, check streak, and mark scenario complete — only once per session
   useEffect(() => {
     const summaryKey = `perin_summary_${xpEarned}_${messages}`;
     const alreadyAwarded = sessionStorage.getItem(summaryKey);
@@ -57,6 +56,15 @@ export default function SessionSummary() {
       sessionStorage.setItem(summaryKey, '1');
       if (xpEarned > 0) dispatch({ type: 'AWARD_XP', payload: xpEarned });
       dispatch({ type: 'CHECK_STREAK' });
+
+      // Mark scenario as completed in journey
+      if (level && idx !== null) {
+        try {
+          const completed = JSON.parse(localStorage.getItem('perin_completed') || '{}');
+          completed[`${lang}_${dialect}_${level}_${idx}`] = true;
+          localStorage.setItem('perin_completed', JSON.stringify(completed));
+        } catch { /* silent */ }
+      }
     }
   }, []);
 
@@ -211,6 +219,17 @@ ${transcript}`,
             What to do next
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <button
+              onClick={() => navigate('/journey')}
+              style={{ background: 'var(--card)', border: '1.5px solid var(--border)', borderRadius: 12, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', fontFamily: "'DM Sans',sans-serif", width: '100%', textAlign: 'left' }}
+            >
+              <span style={{ fontSize: '1.2rem' }}>🗺️</span>
+              <div>
+                <div style={{ fontSize: '.88rem', fontWeight: 600, color: 'var(--ink)' }}>Continue your journey</div>
+                <div style={{ fontSize: '.76rem', color: 'var(--muted)' }}>See what's unlocked next</div>
+              </div>
+            </button>
+
             <button
               onClick={() => navigate('/scenarios')}
               style={{ background: 'var(--card)', border: '1.5px solid var(--border)', borderRadius: 12, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', fontFamily: "'DM Sans',sans-serif", width: '100%', textAlign: 'left' }}

@@ -73,7 +73,7 @@ function buildSystemPrompt(config, vocab) {
 
 function stripMd(t) {
   return (t || '')
-    .replace(/\*[^*]+\*/g, '')          // remove *asterisk actions*
+    .replace(/\*[^*]+\*/g, '')
     .replace(/\*\*(.+?)\*\*/g, '$1')
     .replace(/`(.+?)`/g, '$1')
     .replace(/^#{1,3} /gm, '')
@@ -157,13 +157,13 @@ function ChipBar({ chips, lang, onSave }) {
 
 function stripAsteriskActions(text) {
   return (text || '')
-    .replace(/\*[^*\n]+\*/g, '')  // remove *action* blocks
-    .replace(/[ \t]{2,}/g, ' ')   // collapse extra spaces
-    .replace(/\n{3,}/g, '\n\n')   // max 2 newlines
+    .replace(/\*[^*\n]+\*/g, '')
+    .replace(/[ \t]{2,}/g, ' ')
+    .replace(/\n{3,}/g, '\n\n')
     .trim();
 }
 
-// ─── Message components — DO NOT CHANGE LAYOUT ────────────────────────────────
+// ─── Message components ───────────────────────────────────────────────────────
 function OpeningMessage({ msg, level, lang, onPlay, onLoop, onTranslate, onSave, looping, translation }) {
   const parsed = parseOpeningMessage(msg.text);
   const [saved, setSaved] = useState(false);
@@ -283,6 +283,8 @@ export default function Chat() {
   const context = sessionData.context || '';
   const nativeLang = state.profile?.native || 'English';
   const motivation = state.profile?.motivation || '';
+  const idx = sessionData.idx ?? null;
+
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [isSending, setIsSending] = useState(false);
@@ -292,11 +294,10 @@ export default function Chat() {
   const [voiceMode, setVoiceMode] = useState(false);
   const [initialized, setInitialized] = useState(false);
   const [saveToast, setSaveToast] = useState(null);
-  const [loopingId, setLoopingId] = useState(null);   // msg.id currently looping
-  const [translations, setTranslations] = useState({}); // msg.id → translated text
+  const [loopingId, setLoopingId] = useState(null);
+  const [translations, setTranslations] = useState({});
   const loopRef = useRef(null);
 
-  // Voice gender toggle: 'auto' | 'female' | 'male'
   const [voiceGender, setVoiceGender] = useState(() =>
     localStorage.getItem('perin_voice_gender_pref') || 'auto'
   );
@@ -337,18 +338,16 @@ export default function Chat() {
 
   function handleLoop(text) {
     if (loopRef.current) {
-      // stop looping
       clearTimeout(loopRef.current);
       loopRef.current = null;
       stopAudio();
       setLoopingId(null);
       return;
     }
-    // find the msg id for this text
     const msgId = messages.find(m => m.role === 'ai' && m.text === text)?.id || null;
     setLoopingId(msgId);
     async function playOnce() {
-      if (!loopRef.current) return; // stopped
+      if (!loopRef.current) return;
       await speakMessage(text);
       if (loopRef.current) loopRef.current = setTimeout(playOnce, 800);
     }
@@ -357,7 +356,6 @@ export default function Chat() {
 
   async function handleTranslate(msgId, text) {
     if (translations[msgId]) {
-      // toggle off
       setTranslations(t => { const n = { ...t }; delete n[msgId]; return n; });
       return;
     }
@@ -504,7 +502,6 @@ RULES:
 
       scrollToBottom();
 
-      // Retry opening if beginner format is missing "Try saying:"
       if (isInit && level === 'beginner' && mode !== 'freechat' && !fullText.toLowerCase().includes('try saying')) {
         setTimeout(() => {
           setMessages(prev => prev.filter(m => !m.isOpening));
@@ -533,7 +530,6 @@ RULES:
   }
 
   useEffect(() => {
-    // Paywall gate — check before starting
     const used = state.subscription?.conversations_used || 0;
     const isPro = state.subscription?.status === 'pro';
     if (!isPro && used >= 5) { navigate('/paywall', { replace: true }); return; }
@@ -541,7 +537,6 @@ RULES:
     return () => {
       abortRef.current?.abort();
       stopAudio();
-      // Clean up any active loop
       if (loopRef.current) { clearTimeout(loopRef.current); loopRef.current = null; }
     };
   }, []);
@@ -563,16 +558,13 @@ RULES:
     const msgCount = historyRef.current.filter(m => m.role === 'user').length;
     if (msgCount < 1) { navigate('/dashboard'); return; }
 
-    // Increment free usage counter
     const used = state.subscription?.conversations_used || 0;
     dispatch({ type: 'SET_SUBSCRIPTION', payload: { ...state.subscription, conversations_used: used + 1 } });
 
-    // Track daily minutes
     const dayKey = 'perin_daily_mins_' + new Date().toDateString();
     const prevMins = parseInt(localStorage.getItem(dayKey) || '0');
     localStorage.setItem(dayKey, String(prevMins + Math.max(duration, 1)));
 
-    // Add to session history
     dispatch({
       type: 'ADD_SESSION',
       payload: {
@@ -594,11 +586,13 @@ RULES:
         messages: msgCount,
         lang, dialect, level,
         scenario,
+        idx,
         flag: state.activeLang?.flag || '',
         history: historyRef.current.slice(-30),
       },
     });
   }
+
   function handleKey(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }
 
   async function handleMic() {
