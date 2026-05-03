@@ -31,7 +31,6 @@ function getPrevNodeDone(lang, dialect, stage, stageIdx, nodeIdx) {
   return false;
 }
 
-// Confetti burst component
 function Confetti() {
   const pieces = Array.from({ length: 28 }, (_, i) => ({
     id: i,
@@ -55,7 +54,6 @@ function Confetti() {
   );
 }
 
-// Milestone celebration modal
 function CelebrationModal({ celebration, onContinue }) {
   if (!celebration) return null;
   const { stage } = celebration;
@@ -95,8 +93,8 @@ export default function Journey() {
   const dialect = state.activeLang?.dialect || state.languages?.[0]?.dialect || lang;
 
   const [celebration, setCelebration] = useState(null);
+  const [lockedToast, setLockedToast] = useState(null);
 
-  // Detect newly completed stages on mount
   useEffect(() => {
     if (!lang) return;
     for (let i = 0; i < JOURNEY_STAGES.length; i++) {
@@ -123,11 +121,39 @@ export default function Journey() {
     navigate('/wordprep', { state: { scenario, level, idx: scenarioIdx, lang, dialect } });
   }
 
+  function handleLockedTap(stage, stageIdx, nodeIdx) {
+    let blockingTitle = null;
+    if (nodeIdx > 0) {
+      const prevIdx = stage.indices[nodeIdx - 1];
+      const prev = SCENARIOS[stage.level]?.[prevIdx];
+      blockingTitle = prev?.title;
+    } else if (stageIdx > 0) {
+      const prevStage = JOURNEY_STAGES[stageIdx - 1];
+      const lastIdx = prevStage.indices[prevStage.indices.length - 1];
+      const prev = SCENARIOS[prevStage.level]?.[lastIdx];
+      blockingTitle = prev?.title;
+    }
+    const msg = blockingTitle ? `Finish "${blockingTitle}" first` : 'Complete the previous scenario first';
+    setLockedToast(msg);
+    setTimeout(() => setLockedToast(null), 2500);
+  }
+
   const allDone = JOURNEY_STAGES.every(s => s.indices.every(idx => isScenarioDone(lang, dialect, s.level, idx)));
 
   return (
     <div className="screen active" id="screen-journey">
       <CelebrationModal celebration={celebration} onContinue={() => setCelebration(null)} />
+
+      {lockedToast && (
+        <div style={{
+          position: 'fixed', bottom: '32px', left: '50%', transform: 'translateX(-50%)',
+          background: '#0a1a3a', color: '#fff', borderRadius: '20px', padding: '10px 20px',
+          fontSize: '.82rem', fontWeight: '600', zIndex: 100, whiteSpace: 'nowrap',
+          animation: 'fadeUp .2s ease', boxShadow: '0 4px 20px rgba(0,0,0,.3)',
+        }}>
+          🔒 {lockedToast}
+        </div>
+      )}
 
       <div style={{ width: '100%', maxWidth: '480px', padding: '0 0 60px' }}>
 
@@ -201,7 +227,7 @@ export default function Journey() {
                         </div>
                         <div
                           className={`journey-node ${done ? 'done' : isCurrent ? 'current' : 'locked'} ${stage.level}-node`}
-                          onClick={() => !locked && startNode(stage.level, scenarioIdx)}
+                          onClick={() => locked ? handleLockedTap(stage, stageIdx, i) : startNode(stage.level, scenarioIdx)}
                         >
                           {done
                             ? <div className="journey-node-icon" style={{ fontSize: '1.3rem' }}>✓</div>

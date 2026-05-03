@@ -312,7 +312,8 @@ export default function Dashboard() {
             <div className="dcc-text">
               <div className="dcc-label">{anyDone ? '▶ Continue your journey' : '🚀 Start your first session'}</div>
               <div className="dcc-title">{next.scenario?.title}</div>
-              <div className="dcc-sub">{anyDone ? `${next.label} · +${next.scenario?.xp} XP` : 'Tap to begin — your AI tutor is ready'}</div>
+              <div className="dcc-sub" style={{ marginTop: '3px' }}>{next.scenario?.desc?.slice(0, 80)}{next.scenario?.desc?.length > 80 ? '…' : ''}</div>
+              <div className="dcc-sub" style={{ marginTop: '4px', opacity: .7 }}>{next.label} · +{next.scenario?.xp} XP</div>
             </div>
             <span style={{ color: 'var(--accent)', fontSize: '1.2rem' }}>›</span>
           </div>
