@@ -29,6 +29,28 @@ function getNextJourneyScenario(lang, dialect) {
   return null;
 }
 
+function getCurrentStageProgress(lang, dialect) {
+  for (const stage of JOURNEY_STAGES) {
+    const done = stage.indices.filter(idx => isScenarioDone(lang, dialect, stage.level, idx)).length;
+    const total = stage.indices.length;
+    if (done < total) return { done, total, label: stage.label };
+  }
+  return null;
+}
+
+function getNewlyUnlockedStage(lang, dialect) {
+  for (let i = 0; i < JOURNEY_STAGES.length - 1; i++) {
+    const stage = JOURNEY_STAGES[i];
+    const next = JOURNEY_STAGES[i + 1];
+    const stageDone = stage.indices.every(idx => isScenarioDone(lang, dialect, stage.level, idx));
+    const bannerKey = `perin_unlock_banner_${lang}_${dialect}_${i}`;
+    if (stageDone && !localStorage.getItem(bannerKey)) {
+      return { stage: next, key: bannerKey };
+    }
+  }
+  return null;
+}
+
 function getHoursToday() {
   try {
     const key = 'perin_daily_mins_' + new Date().toDateString();
@@ -207,6 +229,8 @@ function getDailyMission(sessions) {
         { task: 'Finish a Fill in the Blank drill', type: 'fib', icon: '✏️', xp: 30 },
         { task: 'Try a Culture Quiz', type: 'quiz', icon: '🧠', xp: 35 },
         { task: 'Review your saved vocabulary', type: 'srs', icon: '🔁', xp: 25 },
+        { task: 'Try a Listen & Respond drill', type: 'listening', icon: '🎧', xp: 35 },
+        { task: 'Build a sentence in the Sentence Builder', type: 'sentence', icon: '🔤', xp: 30 },
       ];
 
   const seed = new Date().toDateString();
@@ -253,6 +277,7 @@ export default function Dashboard() {
   const { state, dispatch } = useApp();
   const navigate = useNavigate();
   const [drillsOpen, setDrillsOpen] = useState(false);
+  const [unlockedBanner, setUnlockedBanner] = useState(() => null);
 
   const profile = state.profile;
   const languages = state.languages || [];
@@ -274,6 +299,19 @@ export default function Dashboard() {
 
   const next = lang ? getNextJourneyScenario(lang, dialect) : null;
   const anyDone = lang && JOURNEY_STAGES.some(s => s.indices.some(idx => isScenarioDone(lang, dialect, s.level, idx)));
+  const stageProgress = lang ? getCurrentStageProgress(lang, dialect) : null;
+
+  // Check for newly unlocked stage on mount
+  useMemo(() => {
+    if (!lang) return;
+    const unlocked = getNewlyUnlockedStage(lang, dialect);
+    if (unlocked) setUnlockedBanner(unlocked);
+  }, [lang, dialect]);
+
+  function dismissUnlockedBanner() {
+    if (unlockedBanner?.key) localStorage.setItem(unlockedBanner.key, '1');
+    setUnlockedBanner(null);
+  }
 
   function selectLang(l) {
     dispatch({ type: 'SET_ACTIVE_LANG', payload: l });
@@ -303,19 +341,54 @@ export default function Dashboard() {
           {lang && <DailyRing goal={activeLang?.dailyGoal || 30} />}
         </div>
 
+        {/* Newly unlocked stage banner */}
+        {unlockedBanner && (
+          <div style={{
+            background: 'linear-gradient(135deg,#fef3c7,#fde68a)', border: '1.5px solid #f59e0b',
+            borderRadius: '14px', padding: '12px 16px', marginBottom: '10px',
+            display: 'flex', alignItems: 'center', gap: '12px',
+          }}>
+            <span style={{ fontSize: '1.6rem' }}>🎉</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: '.68rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '.1em', color: '#92400e', marginBottom: '2px' }}>
+                New stage unlocked
+              </div>
+              <div style={{ fontSize: '.9rem', fontWeight: '700', color: '#78350f' }}>
+                {unlockedBanner.stage?.label}
+              </div>
+            </div>
+            <button
+              onClick={dismissUnlockedBanner}
+              style={{ background: 'none', border: 'none', fontSize: '1.1rem', cursor: 'pointer', color: '#92400e', padding: '4px' }}
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
         <DailyMission sessions={profile?.sessions || 0} navigate={navigate} />
 
         {next && (
           <div className="dash-continue-card" onClick={continueJourney}
             style={{ borderColor: 'var(--accent)', background: 'linear-gradient(135deg,var(--card),rgba(26,86,219,.04))', marginBottom: '10px', cursor: 'pointer' }}>
             <div className="dcc-icon">{next.scenario?.icon || '💬'}</div>
-            <div className="dcc-text">
+            <div className="dcc-text" style={{ flex: 1, minWidth: 0 }}>
               <div className="dcc-label">{anyDone ? '▶ Continue your journey' : '🚀 Start your first session'}</div>
               <div className="dcc-title">{next.scenario?.title}</div>
               <div className="dcc-sub" style={{ marginTop: '3px' }}>{next.scenario?.desc?.slice(0, 80)}{next.scenario?.desc?.length > 80 ? '…' : ''}</div>
-              <div className="dcc-sub" style={{ marginTop: '4px', opacity: .7 }}>{next.label} · +{next.scenario?.xp} XP</div>
+              {stageProgress && (
+                <div style={{ marginTop: '8px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3px' }}>
+                    <span style={{ fontSize: '.65rem', color: 'var(--muted)' }}>{stageProgress.label} — {stageProgress.done}/{stageProgress.total} done</span>
+                    <span style={{ fontSize: '.65rem', fontWeight: '700', color: 'var(--accent)' }}>{Math.round(stageProgress.done / stageProgress.total * 100)}%</span>
+                  </div>
+                  <div style={{ height: '4px', background: 'var(--border)', borderRadius: '2px', overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${stageProgress.done / stageProgress.total * 100}%`, background: 'var(--accent)', borderRadius: '2px', transition: 'width .5s' }} />
+                  </div>
+                </div>
+              )}
             </div>
-            <span style={{ color: 'var(--accent)', fontSize: '1.2rem' }}>›</span>
+            <span style={{ color: 'var(--accent)', fontSize: '1.2rem', flexShrink: 0 }}>›</span>
           </div>
         )}
 
