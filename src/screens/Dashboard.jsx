@@ -288,7 +288,7 @@ export default function Dashboard() {
 
   function continueJourney() {
     if (!next) return;
-    navigate('/chat', { state: { scenario: next.scenario, level: next.level, idx: next.idx, lang, dialect } });
+    navigate('/wordprep', { state: { scenario: next.scenario, level: next.level, idx: next.idx, lang, dialect } });
   }
 
   return (

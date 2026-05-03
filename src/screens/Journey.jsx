@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext.jsx';
 import { JOURNEY_STAGES } from '../data/journey.js';
@@ -30,11 +31,85 @@ function getPrevNodeDone(lang, dialect, stage, stageIdx, nodeIdx) {
   return false;
 }
 
+// Confetti burst component
+function Confetti() {
+  const pieces = Array.from({ length: 28 }, (_, i) => ({
+    id: i,
+    color: ['#f5c400','#1a56db','#22c55e','#f97316','#a855f7','#ec4899'][i % 6],
+    x: Math.random() * 100,
+    delay: Math.random() * 0.6,
+    duration: 1.2 + Math.random() * 0.8,
+    size: 6 + Math.random() * 8,
+  }));
+  return (
+    <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden' }}>
+      {pieces.map(p => (
+        <div key={p.id} style={{
+          position: 'absolute', top: '-10px', left: `${p.x}%`,
+          width: p.size, height: p.size,
+          background: p.color, borderRadius: '2px',
+          animation: `confettiFall ${p.duration}s ${p.delay}s ease-in forwards`,
+        }} />
+      ))}
+    </div>
+  );
+}
+
+// Milestone celebration modal
+function CelebrationModal({ celebration, onContinue }) {
+  if (!celebration) return null;
+  const { stage } = celebration;
+  return (
+    <div className="journey-celebration-overlay" onClick={onContinue}>
+      <Confetti />
+      <div className="journey-celebration-card" onClick={e => e.stopPropagation()}>
+        <div style={{ fontSize: '4rem', marginBottom: '12px' }}>🏆</div>
+        <div style={{ fontSize: '.72rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '.15em', color: 'var(--accent)', marginBottom: '8px' }}>
+          Stage Complete
+        </div>
+        <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: '1.6rem', fontWeight: '700', marginBottom: '8px', color: 'var(--ink)' }}>
+          {stage.milestone?.title || stage.label}
+        </h2>
+        <p style={{ fontSize: '.88rem', color: 'var(--muted)', marginBottom: '8px', lineHeight: '1.6' }}>
+          {stage.milestone?.reward || 'You completed this stage!'}
+        </p>
+        <div style={{ background: 'linear-gradient(135deg,#fef3c7,#fde68a)', border: '1.5px solid #f59e0b', borderRadius: '12px', padding: '12px 16px', marginBottom: '24px', display: 'inline-block' }}>
+          <span style={{ fontSize: '1.4rem' }}>{stage.milestone?.icon || '🌟'}</span>
+          <span style={{ fontWeight: '700', color: '#92400e', marginLeft: '8px' }}>{stage.label} Unlocked</span>
+        </div>
+        <button
+          onClick={onContinue}
+          style={{ width: '100%', background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: '14px', padding: '14px', fontFamily: "'DM Sans',sans-serif", fontSize: '1rem', fontWeight: '700', cursor: 'pointer' }}
+        >
+          Keep going →
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function Journey() {
   const { state, isPro } = useApp();
   const navigate = useNavigate();
   const lang = state.activeLang?.lang || state.languages?.[0]?.lang || '';
   const dialect = state.activeLang?.dialect || state.languages?.[0]?.dialect || lang;
+
+  const [celebration, setCelebration] = useState(null);
+
+  // Detect newly completed stages on mount
+  useEffect(() => {
+    if (!lang) return;
+    for (let i = 0; i < JOURNEY_STAGES.length; i++) {
+      const stage = JOURNEY_STAGES[i];
+      const stageDone = stage.indices.every(idx => isScenarioDone(lang, dialect, stage.level, idx));
+      const celebKey = `perin_celebrated_${lang}_${dialect}_${stage.level}_${i}`;
+      if (stageDone && !localStorage.getItem(celebKey)) {
+        localStorage.setItem(celebKey, '1');
+        setCelebration({ stage, stageIdx: i });
+        break;
+      }
+    }
+  }, [lang, dialect]);
 
   const totalNodes = JOURNEY_STAGES.reduce((sum, s) => sum + s.indices.length, 0);
   const doneNodes = JOURNEY_STAGES.reduce((sum, s) =>
@@ -52,6 +127,8 @@ export default function Journey() {
 
   return (
     <div className="screen active" id="screen-journey">
+      <CelebrationModal celebration={celebration} onContinue={() => setCelebration(null)} />
+
       <div style={{ width: '100%', maxWidth: '480px', padding: '0 0 60px' }}>
 
         <div style={{ padding: '20px 20px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
@@ -93,10 +170,10 @@ export default function Journey() {
                   <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px' }}>
                       <span style={{ fontSize: '.72rem', color: 'var(--muted)' }}>{stageDoneCount} of {stageTotal} scenarios</span>
-                      <span style={{ fontSize: '.72rem', fontWeight: '700', color: 'var(--accent)' }}>{stagePct}%</span>
+                      <span style={{ fontSize: '.72rem', fontWeight: '700', color: stageDone ? '#22c55e' : 'var(--accent)' }}>{stagePct}%</span>
                     </div>
                     <div style={{ height: '6px', background: 'var(--border)', borderRadius: '3px', overflow: 'hidden' }}>
-                      <div style={{ height: '100%', width: `${stagePct}%`, background: 'var(--accent)', borderRadius: '3px', transition: 'width .6s' }}></div>
+                      <div style={{ height: '100%', width: `${stagePct}%`, background: stageDone ? '#22c55e' : 'var(--accent)', borderRadius: '3px', transition: 'width .6s' }}></div>
                     </div>
                   </div>
                 </div>
@@ -117,14 +194,21 @@ export default function Journey() {
                       )}
                       <div className="journey-node-row">
                         <div className={`journey-node-info ${infoRight ? 'left' : 'right'}`}>
-                          <div className="journey-node-title">{scenario.title}</div>
-                          <div className="journey-node-xp">+{scenario.xp} XP{done ? ' · Done' : isCurrent ? ' · Up next' : ''}</div>
+                          <div className="journey-node-title" style={{ color: locked ? 'var(--muted)' : undefined }}>{scenario.title}</div>
+                          <div className="journey-node-xp">
+                            {done ? '✓ Done' : locked ? '🔒 Locked' : `+${scenario.xp} XP · Up next`}
+                          </div>
                         </div>
                         <div
                           className={`journey-node ${done ? 'done' : isCurrent ? 'current' : 'locked'} ${stage.level}-node`}
                           onClick={() => !locked && startNode(stage.level, scenarioIdx)}
                         >
-                          <div className="journey-node-icon">{done ? '✓' : scenario.icon}</div>
+                          {done
+                            ? <div className="journey-node-icon" style={{ fontSize: '1.3rem' }}>✓</div>
+                            : locked
+                            ? <div className="journey-node-icon" style={{ fontSize: '1.2rem', opacity: 0.5 }}>🔒</div>
+                            : <div className="journey-node-icon">{scenario.icon}</div>
+                          }
                           {done && <div className="journey-node-check">✓</div>}
                         </div>
                       </div>
@@ -140,7 +224,9 @@ export default function Journey() {
                   <div className="journey-milestone-icon">{stageDone ? '🏆' : stage.milestone.icon}</div>
                   <div className="journey-milestone-text">
                     <div className="journey-milestone-title" style={isNativeStage ? { color: '#ede9fe' } : {}}>{stage.milestone.title}</div>
-                    <div className="journey-milestone-sub" style={isNativeStage ? { color: '#a78bfa' } : {}}>{stageDone ? 'Completed!' : stage.milestone.reward}</div>
+                    <div className="journey-milestone-sub" style={isNativeStage ? { color: '#a78bfa' } : {}}>
+                      {stageDone ? 'Completed!' : stage.milestone.reward}
+                    </div>
                   </div>
                   {stageDone && <div style={{ fontSize: '1.2rem' }}>✓</div>}
                 </div>
