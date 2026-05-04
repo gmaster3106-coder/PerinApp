@@ -45,10 +45,10 @@ export default function SessionSummary() {
   const dialectLabel = dialect && dialect !== lang ? `${dialect} ${lang}` : lang;
   const scenarioLabel = scenario?.title || '';
 
-  const [recapPhrases, setRecapPhrases]   = useState(null);
-  const [savedWords,   setSavedWords]     = useState({});
+  const [recapPhrases, setRecapPhrases] = useState(null);
+  const [savedWords, setSavedWords] = useState({});
 
-  // Award XP, check streak, and mark scenario complete — only once per session
+  // Award XP, check streak, mark mission done, mark scenario complete — only once per session
   useEffect(() => {
     const summaryKey = `perin_summary_${xpEarned}_${messages}`;
     const alreadyAwarded = sessionStorage.getItem(summaryKey);
@@ -56,6 +56,11 @@ export default function SessionSummary() {
       sessionStorage.setItem(summaryKey, '1');
       if (xpEarned > 0) dispatch({ type: 'AWARD_XP', payload: xpEarned });
       dispatch({ type: 'CHECK_STREAK' });
+
+      // Mark daily mission as done
+      try {
+        localStorage.setItem('perin_mission_done_' + new Date().toDateString(), '1');
+      } catch { /* silent */ }
 
       // Mark scenario as completed in journey
       if (level && idx !== null) {

@@ -9,7 +9,8 @@ const DEFAULT_PROFILE = {
   motivation: '', milestones: [],
 };
 
-// Safe localStorage helpers — no utility layer
+const DEFAULT_SUBSCRIPTION = { status: 'free', conversations_used: 0 };
+
 function lsGet(key, fallback = null) {
   try {
     const raw = localStorage.getItem(key);
@@ -59,7 +60,7 @@ function reducer(state, action) {
     case 'CHECK_STREAK': {
       const today = todayStr();
       const last = state.profile.lastDate || '';
-      if (last === today) return state; // already counted today
+      if (last === today) return state;
       const yesterday = new Date(Date.now() - 86400000).toDateString();
       const newStreak = last === yesterday ? (state.profile.streak || 0) + 1 : 1;
       return {
@@ -93,7 +94,7 @@ function reducer(state, action) {
 export function AppProvider({ children }) {
   const [state, dispatch] = useReducer(reducer, {
     currentUser: null,
-    subscription: { status: 'free', conversations_used: 0 },
+    subscription: lsGet('perin_subscription', DEFAULT_SUBSCRIPTION),
     profile: lsGet('perin_profile', DEFAULT_PROFILE),
     languages: lsGet('perin_languages', []),
     activeLang: {},
@@ -110,6 +111,14 @@ export function AppProvider({ children }) {
   useEffect(() => { lsSet('perin_vocab', state.vocab); }, [state.vocab]);
   useEffect(() => { lsSet('perin_history', state.history); }, [state.history]);
   useEffect(() => { lsSet('perin_luma_history', state.lumaHistory); }, [state.lumaHistory]);
+
+  // Persist subscription so conversations_used survives page reloads
+  useEffect(() => {
+    // Only persist free tier count — pro status comes from server
+    if (state.subscription?.status === 'free') {
+      lsSet('perin_subscription', state.subscription);
+    }
+  }, [state.subscription]);
 
   useEffect(() => {
     document.body.classList.toggle('dark', state.dark);
