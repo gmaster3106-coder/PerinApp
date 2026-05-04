@@ -209,6 +209,16 @@ const MISSION_ROUTES = {
   vocabquiz: '/vocab-quiz',
 };
 
+// What to suggest after mission is done — pick something different from the mission type
+const AFTER_MISSION_SUGGESTIONS = [
+  { label: '🗺️ Continue your journey', path: 'journey' },
+  { label: '✏️ Fill the Blank drill', path: '/fib' },
+  { label: '🧠 Culture Quiz', path: '/vocab-quiz' },
+  { label: '🔁 Review vocab', path: '/srs' },
+  { label: '🎧 Listen & Respond', path: '/listening' },
+  { label: '🎬 Try Scene Mode', path: '/scenes' },
+];
+
 function getDailyMission(sessions) {
   const key = 'perin_mission_' + new Date().toDateString();
   const saved = localStorage.getItem(key);
@@ -245,10 +255,16 @@ function isDailyMissionDone() {
   return !!localStorage.getItem('perin_mission_done_' + new Date().toDateString());
 }
 
-function DailyMission({ sessions, navigate }) {
+function DailyMission({ sessions, navigate, nextJourney }) {
   const mission = getDailyMission(sessions);
   const done = isDailyMissionDone();
   const route = MISSION_ROUTES[mission.type] || '/scenarios';
+
+  // Pick 2 suggestions different from the completed mission type
+  const suggestions = AFTER_MISSION_SUGGESTIONS.filter(s => {
+    if (s.path === 'journey') return !!nextJourney;
+    return !route.includes(s.path.replace('/', ''));
+  }).slice(0, 2);
 
   return (
     <div className={`mission-card${done ? ' mission-done' : ''}`} style={{ marginBottom: '10px' }}>
@@ -268,6 +284,29 @@ function DailyMission({ sessions, navigate }) {
           onClick={() => navigate(route)}>
           Start →
         </button>
+      )}
+      {done && suggestions.length > 0 && (
+        <div style={{ marginTop: '10px', borderTop: '1px solid var(--border)', paddingTop: '10px' }}>
+          <div style={{ fontSize: '.68rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--muted)', marginBottom: '7px' }}>
+            Keep going
+          </div>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            {suggestions.map((s, i) => (
+              <button
+                key={i}
+                onClick={() => s.path === 'journey' ? navigate('/journey') : navigate(s.path)}
+                style={{
+                  flex: 1, background: 'var(--cream)', border: '1.5px solid var(--border)',
+                  borderRadius: '10px', padding: '8px 10px', fontFamily: "'DM Sans',sans-serif",
+                  fontSize: '.78rem', fontWeight: '600', color: 'var(--ink)', cursor: 'pointer',
+                  textAlign: 'center', transition: 'all .15s',
+                }}
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
+        </div>
       )}
     </div>
   );
@@ -301,7 +340,6 @@ export default function Dashboard() {
   const anyDone = lang && JOURNEY_STAGES.some(s => s.indices.some(idx => isScenarioDone(lang, dialect, s.level, idx)));
   const stageProgress = lang ? getCurrentStageProgress(lang, dialect) : null;
 
-  // Check for newly unlocked stage on mount
   useMemo(() => {
     if (!lang) return;
     const unlocked = getNewlyUnlockedStage(lang, dialect);
@@ -341,7 +379,6 @@ export default function Dashboard() {
           {lang && <DailyRing goal={activeLang?.dailyGoal || 30} />}
         </div>
 
-        {/* Newly unlocked stage banner */}
         {unlockedBanner && (
           <div style={{
             background: 'linear-gradient(135deg,#fef3c7,#fde68a)', border: '1.5px solid #f59e0b',
@@ -366,7 +403,7 @@ export default function Dashboard() {
           </div>
         )}
 
-        <DailyMission sessions={profile?.sessions || 0} navigate={navigate} />
+        <DailyMission sessions={profile?.sessions || 0} navigate={navigate} nextJourney={next} />
 
         {next && (
           <div className="dash-continue-card" onClick={continueJourney}

@@ -67,8 +67,18 @@ function buildSystemPrompt(config, vocab) {
     : '';
   const motivNote = motivation ? `\n\nLEARNER: Their reason for learning ${lang}: "${motivation}".` : '';
   const contextNote = config.context ? `\n\nREADING CONTEXT: The learner just read this text: "${config.context.slice(0, 300)}". Discuss it naturally.` : '';
+
+  let historyNote = '';
+  try {
+    const history = JSON.parse(localStorage.getItem('perin_history') || '[]');
+    const recent = history.filter(s => s.lang === lang).slice(0, 5).map(s => s.scenario).filter(Boolean);
+    if (recent.length > 0) {
+      historyNote = `\n\nRECENT SESSIONS: The learner has recently practiced: ${recent.join(', ')}. Reference these naturally if relevant, and vary your approach so each session feels fresh.`;
+    }
+  } catch { /* silent */ }
+
   const introText = scenarioTitle ? `You are a character in the scenario: "${scenarioTitle}". ${scenario?.desc || ''}` : '';
-  return introText + dialectNote + `\n\nLEVEL: ${(level || 'intermediate').toUpperCase()}\n${levelInstruction}` + '\n\n' + getBasePrompt(nativeLang || 'English') + scenarioGuardrail + vocabList + motivNote + contextNote;
+  return introText + dialectNote + `\n\nLEVEL: ${(level || 'intermediate').toUpperCase()}\n${levelInstruction}` + '\n\n' + getBasePrompt(nativeLang || 'English') + scenarioGuardrail + vocabList + motivNote + contextNote + historyNote;
 }
 
 function stripMd(t) {
