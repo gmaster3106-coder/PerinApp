@@ -105,6 +105,7 @@ export function AppProvider({ children }) {
   });
 
   const syncTimeoutRef = useRef(null);
+  const syncRetryRef = useRef(0);
 
   useEffect(() => { lsSet('perin_profile', state.profile); }, [state.profile]);
   useEffect(() => { lsSet('perin_languages', state.languages); }, [state.languages]);
@@ -114,7 +115,6 @@ export function AppProvider({ children }) {
 
   // Persist subscription so conversations_used survives page reloads
   useEffect(() => {
-    // Only persist free tier count — pro status comes from server
     if (state.subscription?.status === 'free') {
       lsSet('perin_subscription', state.subscription);
     }
@@ -129,27 +129,45 @@ export function AppProvider({ children }) {
     if (!state.currentUser?.access_token) return;
     if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
     syncTimeoutRef.current = setTimeout(async () => {
-      try {
-        const completed = lsGet('perin_completed', {});
-        await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${state.currentUser.id}`, {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            'apikey': SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${state.currentUser.access_token}`,
-            'Prefer': 'return=minimal',
-          },
-          body: JSON.stringify({
-            vocab_data: state.vocab,
-            profile_data: state.profile,
-            languages_data: state.languages,
-            completed_data: completed,
-            history_data: state.history.slice(0, 50),
-            luma_data: state.lumaHistory.slice(0, 20),
-            synced_at: new Date().toISOString(),
-          }),
-        });
-      } catch { /* silent */ }
+      const maxRetries = 3;
+      let attempt = 0;
+
+      async function attemptSync() {
+        try {
+          const completed = lsGet('perin_completed', {});
+          const res = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${state.currentUser.id}`, {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+              'apikey': SUPABASE_ANON_KEY,
+              'Authorization': `Bearer ${state.currentUser.access_token}`,
+              'Prefer': 'return=minimal',
+            },
+            body: JSON.stringify({
+              vocab_data: state.vocab,
+              profile_data: state.profile,
+              languages_data: state.languages,
+              completed_data: completed,
+              history_data: state.history.slice(0, 50),
+              luma_data: state.lumaHistory.slice(0, 20),
+              synced_at: new Date().toISOString(),
+            }),
+          });
+
+          if (!res.ok) throw new Error(`Sync failed: ${res.status}`);
+          syncRetryRef.current = 0; // reset on success
+        } catch {
+          attempt++;
+          if (attempt < maxRetries) {
+            // Exponential backoff: 5s, 15s, 45s
+            const delay = 5000 * Math.pow(3, attempt - 1);
+            setTimeout(attemptSync, delay);
+          }
+          // After max retries, give up silently — data is safe in localStorage
+        }
+      }
+
+      attemptSync();
     }, 3000);
   };
 

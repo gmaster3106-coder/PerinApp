@@ -2,8 +2,28 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext.jsx';
 import { useAuth } from '../hooks/useAuth.js';
-import { ACCENT_THEMES } from '../config/constants.js';
+import { ACCENT_THEMES, SUPABASE_URL, SUPABASE_ANON_KEY } from '../config/constants.js';
 import { getAvatarColor, getAvatarInitials } from '../utils/avatarUtils.js';
+
+const PERIN_LS_KEYS = [
+  'perin_auth', 'perin_profile', 'perin_languages', 'perin_vocab',
+  'perin_history', 'perin_luma_history', 'perin_completed', 'perin_subscription',
+  'perin_dark', 'perin_accent', 'perin_voice_gender_pref', 'perin_tour_done',
+];
+
+function clearAllPerinData() {
+  // Clear known keys
+  PERIN_LS_KEYS.forEach(k => localStorage.removeItem(k));
+  // Clear date-based keys
+  const keysToRemove = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k && (k.startsWith('perin_') || k.startsWith('perin_mission') || k.startsWith('perin_daily'))) {
+      keysToRemove.push(k);
+    }
+  }
+  keysToRemove.forEach(k => localStorage.removeItem(k));
+}
 
 export default function Settings() {
   const { state, dispatch } = useApp();
@@ -19,6 +39,7 @@ export default function Settings() {
   const [voicePref, setVoicePref] = useState(
     () => localStorage.getItem('perin_voice_gender_pref') || 'auto'
   );
+  const [deleting, setDeleting] = useState(false);
 
   function toggleDark() { dispatch({ type: 'SET_DARK', payload: !state.dark }); }
 
@@ -37,6 +58,50 @@ export default function Settings() {
 
   function handleSignOut() {
     if (window.confirm('Sign out of your account?')) { logout(); navigate('/welcome'); }
+  }
+
+  async function handleDeleteAccount() {
+    const confirmed = window.confirm(
+      'Delete your account permanently?\n\nThis will erase all your progress, vocab, and data. This cannot be undone.'
+    );
+    if (!confirmed) return;
+
+    const doubleConfirm = window.confirm('Are you absolutely sure? This is permanent.');
+    if (!doubleConfirm) return;
+
+    setDeleting(true);
+    try {
+      const token = state.currentUser?.access_token;
+      const userId = state.currentUser?.id;
+
+      if (token && userId) {
+        // Delete profile data from Supabase
+        await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${userId}`, {
+          method: 'DELETE',
+          headers: {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${token}`,
+          },
+        }).catch(() => {});
+
+        // Delete the auth user
+        await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+          method: 'DELETE',
+          headers: {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${token}`,
+          },
+        }).catch(() => {});
+      }
+
+      // Clear all local data regardless of server response
+      clearAllPerinData();
+      navigate('/welcome', { replace: true });
+    } catch {
+      // Even if server calls fail, clear local data and redirect
+      clearAllPerinData();
+      navigate('/welcome', { replace: true });
+    }
   }
 
   function pickAccent(theme) {
@@ -71,12 +136,23 @@ export default function Settings() {
               <div className="settings-row-right"><span className="settings-chevron">›</span></div>
             </div>
             {isLoggedIn && (
-              <div className="settings-row clickable settings-danger" onClick={handleSignOut}>
-                <div className="settings-row-left">
-                  <div className="settings-row-icon">🚪</div>
-                  <div className="settings-row-text"><strong>Sign Out</strong><span>{state.currentUser?.email}</span></div>
+              <>
+                <div className="settings-row clickable settings-danger" onClick={handleSignOut}>
+                  <div className="settings-row-left">
+                    <div className="settings-row-icon">🚪</div>
+                    <div className="settings-row-text"><strong>Sign Out</strong><span>{state.currentUser?.email}</span></div>
+                  </div>
                 </div>
-              </div>
+                <div className="settings-row clickable settings-danger" onClick={handleDeleteAccount}>
+                  <div className="settings-row-left">
+                    <div className="settings-row-icon">🗑️</div>
+                    <div className="settings-row-text">
+                      <strong>{deleting ? 'Deleting…' : 'Delete Account'}</strong>
+                      <span>Permanently erase all data</span>
+                    </div>
+                  </div>
+                </div>
+              </>
             )}
             {!isLoggedIn && (
               <div className="settings-row clickable" onClick={() => dispatch({ type: 'SHOW_AUTH_MODAL' })}>
@@ -125,8 +201,6 @@ export default function Settings() {
         <div className="settings-section">
           <div className="settings-section-label">Appearance</div>
           <div className="settings-card">
-
-            {/* Dark mode */}
             <div className="settings-row">
               <div className="settings-row-left">
                 <div className="settings-row-icon">🌙</div>
@@ -139,7 +213,6 @@ export default function Settings() {
               </div>
             </div>
 
-            {/* Voice gender */}
             <div className="settings-row">
               <div className="settings-row-left" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '10px', width: '100%' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -157,7 +230,6 @@ export default function Settings() {
               </div>
             </div>
 
-            {/* Accent color */}
             <div className="settings-row">
               <div className="settings-row-left" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '10px', width: '100%' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -172,7 +244,6 @@ export default function Settings() {
                 </div>
               </div>
             </div>
-
           </div>
         </div>
 
