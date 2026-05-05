@@ -33,6 +33,16 @@ function applyWrong(v) {
   return { ...v, strength: 0, interval: 1, nextReview: Date.now() + 86400000, reviews: (v.reviews || 0) + 1 };
 }
 
+function markMissionDoneIfMatch(types) {
+  try {
+    const key = 'perin_mission_' + new Date().toDateString();
+    const mission = JSON.parse(localStorage.getItem(key) || '{}');
+    if (types.includes(mission.type)) {
+      localStorage.setItem('perin_mission_done_' + new Date().toDateString(), '1');
+    }
+  } catch { /* silent */ }
+}
+
 export default function SrsReview() {
   const { state, dispatch } = useApp();
   const navigate = useNavigate();
@@ -42,7 +52,6 @@ export default function SrsReview() {
   const lang       = activeLang?.lang    || '';
   const dialect    = activeLang?.dialect || lang;
 
-  // FIX: start as 'empty' so no blank screen before useEffect runs
   const [phase, setPhase]       = useState('empty');
   const [queue, setQueue]       = useState([]);
   const [index, setIndex]       = useState(0);
@@ -100,6 +109,7 @@ export default function SrsReview() {
     if (nextIndex >= queue.length) {
       const xp = (wasCorrect ? correct + 1 : correct) * 5;
       dispatch({ type: 'AWARD_XP', payload: xp });
+      markMissionDoneIfMatch(['srs', 'vocab', 'vocabquiz']);
       setRemainingDue(getDueWords(loadVocab()).length);
       setPhase('done');
     } else {

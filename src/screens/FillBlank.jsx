@@ -28,6 +28,16 @@ function getSavedVocab(lang) {
   } catch { return []; }
 }
 
+function markMissionDoneIfMatch(types) {
+  try {
+    const key = 'perin_mission_' + new Date().toDateString();
+    const mission = JSON.parse(localStorage.getItem(key) || '{}');
+    if (types.includes(mission.type)) {
+      localStorage.setItem('perin_mission_done_' + new Date().toDateString(), '1');
+    }
+  } catch { /* silent */ }
+}
+
 export default function FillBlank() {
   const { state, dispatch } = useApp();
   const navigate = useNavigate();
@@ -162,6 +172,7 @@ Make sentences authentic ${dialect} ${lang} — use vocabulary and situations re
     const next = index + 1;
     if (next >= questions.length) {
       dispatch({ type: 'AWARD_XP', payload: score * 8 });
+      markMissionDoneIfMatch(['fib', 'fill_blank']);
       setPhase('score');
     } else {
       setIndex(next);

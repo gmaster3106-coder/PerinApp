@@ -19,6 +19,18 @@ function getVocabCount() {
   try { return JSON.parse(localStorage.getItem('perin_vocab') || '[]').length; } catch { return 0; }
 }
 
+// Only mark mission done if it's a chat-type mission
+function markMissionDoneIfChat() {
+  try {
+    const key = 'perin_mission_' + new Date().toDateString();
+    const mission = JSON.parse(localStorage.getItem(key) || '{}');
+    const chatTypes = ['scenario', 'scene', 'freechat'];
+    if (!mission.type || chatTypes.includes(mission.type)) {
+      localStorage.setItem('perin_mission_done_' + new Date().toDateString(), '1');
+    }
+  } catch { /* silent */ }
+}
+
 export default function SessionSummary() {
   const { state, dispatch } = useApp();
   const navigate = useNavigate();
@@ -57,10 +69,8 @@ export default function SessionSummary() {
       if (xpEarned > 0) dispatch({ type: 'AWARD_XP', payload: xpEarned });
       dispatch({ type: 'CHECK_STREAK' });
 
-      // Mark daily mission as done
-      try {
-        localStorage.setItem('perin_mission_done_' + new Date().toDateString(), '1');
-      } catch { /* silent */ }
+      // Only mark mission done if today's mission is a chat-type
+      markMissionDoneIfChat();
 
       // Mark scenario as completed in journey
       if (level && idx !== null) {
