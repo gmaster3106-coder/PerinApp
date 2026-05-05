@@ -18,7 +18,7 @@ function normalize(str) {
   return (str || '')
     .toLowerCase()
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '') // strip accents
+    .replace(/[\u0300-\u036f]/g, '')
     .replace(/[¿¡.,!?;:"""'']/g, '')
     .trim();
 }
@@ -28,6 +28,16 @@ function score(typed, expected) {
   const e = normalize(expected).split(/\s+/);
   const matches = t.filter(w => e.includes(w)).length;
   return e.length > 0 ? matches / e.length : 0;
+}
+
+function markMissionDoneIfMatch(types) {
+  try {
+    const key = 'perin_mission_' + new Date().toDateString();
+    const mission = JSON.parse(localStorage.getItem(key) || '{}');
+    if (types.includes(mission.type)) {
+      localStorage.setItem('perin_mission_done_' + new Date().toDateString(), '1');
+    }
+  } catch { /* silent */ }
 }
 
 export default function ListeningMode() {
@@ -43,13 +53,13 @@ export default function ListeningMode() {
   const voiceId     = voiceIdRef.current;
   const langCode   = getLangCode(lang, dialect);
 
-  const [phase, setPhase]         = useState('loading'); // loading | question | score | error
+  const [phase, setPhase]         = useState('loading');
   const [questions, setQuestions] = useState([]);
   const [index, setIndex]         = useState(0);
   const [listenScore, setListenScore] = useState(0);
   const [answered, setAnswered]   = useState(false);
   const [typed, setTyped]         = useState('');
-  const [feedback, setFeedback]   = useState(null); // { correct, sentence, translation }
+  const [feedback, setFeedback]   = useState(null);
   const [playing, setPlaying]     = useState(false);
 
   const inputRef = useRef(null);
@@ -100,7 +110,6 @@ export default function ListeningMode() {
 
   useEffect(() => { generate(); }, []);
 
-  // Auto-play on new question
   useEffect(() => {
     if (phase === 'question' && questions[index]) {
       const t = setTimeout(() => playQuestion(), 500);
@@ -108,7 +117,6 @@ export default function ListeningMode() {
     }
   }, [index, phase, questions]);
 
-  // Focus input when question loads
   useEffect(() => {
     if (phase === 'question' && !answered) {
       setTimeout(() => inputRef.current?.focus(), 100);
@@ -140,21 +148,18 @@ export default function ListeningMode() {
   function next() {
     const nextIdx = index + 1;
     if (nextIdx >= questions.length) {
-      // Final score
-      const finalScore = listenScore + (feedback?.correct ? 0 : 0); // already updated via state
       const xp = listenScore * 10;
       dispatch({ type: 'AWARD_XP', payload: xp });
+      markMissionDoneIfMatch(['listening']);
       setPhase('score');
     } else {
       setIndex(nextIdx);
       setAnswered(false);
       setTyped('');
       setFeedback(null);
-      setSpeed('clear');
     }
   }
 
-  // ── Loading ──
   if (phase === 'loading') return (
     <div className="screen active" style={{ alignItems: 'center', padding: '28px 16px 60px' }}>
       <div className="fib-wrap">
@@ -169,7 +174,6 @@ export default function ListeningMode() {
     </div>
   );
 
-  // ── Error ──
   if (phase === 'error') return (
     <div className="screen active" style={{ alignItems: 'center', padding: '28px 16px 60px' }}>
       <div className="fib-wrap">
@@ -183,7 +187,6 @@ export default function ListeningMode() {
     </div>
   );
 
-  // ── Score ──
   if (phase === 'score') {
     const total = questions.length;
     const pct   = Math.round(listenScore / total * 100);
@@ -220,7 +223,6 @@ export default function ListeningMode() {
     );
   }
 
-  // ── Question ──
   const q     = questions[index];
   const total = questions.length;
 
@@ -229,8 +231,6 @@ export default function ListeningMode() {
       <div className="fib-wrap">
         <Header />
         <div className="fib-card">
-
-          {/* Progress dots */}
           <div className="fib-progress">
             {questions.map((_, i) => (
               <div key={i} className={`fib-progress-dot${i < index ? ' done' : ''}`} />
@@ -239,7 +239,6 @@ export default function ListeningMode() {
 
           <div className="fib-counter">🎧 Listen and type · {index + 1} of {total}</div>
 
-          {/* Play button */}
           <div style={{ textAlign: 'center', padding: '28px 0 20px' }}>
             <button
               onClick={() => playQuestion()}
@@ -248,11 +247,8 @@ export default function ListeningMode() {
               {playing ? '⏵' : '🔊'}
             </button>
             <p style={{ fontSize: '.78rem', color: 'var(--muted)', marginTop: 10 }}>Tap to hear the sentence</p>
-
-
           </div>
 
-          {/* Input */}
           <div className="fib-type-area">
             <input
               ref={inputRef}
@@ -269,7 +265,6 @@ export default function ListeningMode() {
             <button className="fib-submit-btn" onClick={check} disabled={answered}>Check</button>
           </div>
 
-          {/* Feedback */}
           {feedback && (
             <div className={`fib-feedback ${feedback.correct ? 'correct' : 'wrong'}`}>
               {feedback.correct
