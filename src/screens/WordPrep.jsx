@@ -7,15 +7,40 @@ import { getLangCode } from '../utils/langUtils.js';
 
 const FALLBACKS = {
   Italian:    [ { target: 'Per favore', pronunciation: 'pehr fah-VOH-reh', english: 'Please' }, { target: 'Grazie', pronunciation: 'GRAH-tsyeh', english: 'Thank you' }, { target: 'Non capisco', pronunciation: 'non kah-PEE-sko', english: "I don't understand" }, { target: 'Mi scusi', pronunciation: 'mee SKOO-zee', english: 'Excuse me' } ],
-  French:     [ { target: 'S\'il vous plaît', pronunciation: 'seel voo PLEH', english: 'Please' }, { target: 'Merci', pronunciation: 'mehr-SEE', english: 'Thank you' }, { target: 'Je ne comprends pas', pronunciation: 'zhuh nuh kom-PRAHN pah', english: "I don't understand" }, { target: 'Excusez-moi', pronunciation: 'ex-koo-ZAY mwah', english: 'Excuse me' } ],
+  French:     [ { target: "S'il vous plaît", pronunciation: 'seel voo PLEH', english: 'Please' }, { target: 'Merci', pronunciation: 'mehr-SEE', english: 'Thank you' }, { target: 'Je ne comprends pas', pronunciation: 'zhuh nuh kom-PRAHN pah', english: "I don't understand" }, { target: 'Excusez-moi', pronunciation: 'ex-koo-ZAY mwah', english: 'Excuse me' } ],
   Portuguese: [ { target: 'Por favor', pronunciation: 'por fah-VOR', english: 'Please' }, { target: 'Obrigado', pronunciation: 'oh-bree-GAH-doo', english: 'Thank you' }, { target: 'Não entendo', pronunciation: 'nowng en-TEN-doo', english: "I don't understand" }, { target: 'Com licença', pronunciation: 'kong lee-SEN-sah', english: 'Excuse me' } ],
   English:    [ { target: 'Please', pronunciation: 'pleez', english: 'Please' }, { target: 'Thank you', pronunciation: 'THANGK yoo', english: 'Thank you' }, { target: "I don't understand", pronunciation: 'eye dont un-der-STAND', english: "I don't understand" }, { target: 'Excuse me', pronunciation: 'ex-KYOOZ mee', english: 'Excuse me' } ],
   Creole:     [ { target: 'Tanpri', pronunciation: 'tahn-PREE', english: 'Please' }, { target: 'Mèsi', pronunciation: 'MEH-see', english: 'Thank you' }, { target: 'Mwen pa konprann', pronunciation: 'mwen pah kon-PRAHN', english: "I don't understand" }, { target: 'Eskize mwen', pronunciation: 'es-kee-ZEH mwen', english: 'Excuse me' } ],
   Spanish:    [ { target: 'Por favor', pronunciation: 'por fah-VOR', english: 'Please' }, { target: 'Gracias', pronunciation: 'GRAH-syahs', english: 'Thank you' }, { target: 'No entiendo', pronunciation: 'no en-TYEN-do', english: "I don't understand" }, { target: 'Disculpe', pronunciation: 'dees-KOOL-peh', english: 'Excuse me' } ],
 };
 
+// Languages that have grammatical gender
+const GENDERED_LANGS = ['Spanish', 'French', 'Italian', 'Portuguese'];
+
+const GENDER_LABELS = {
+  m: { label: 'masc.', color: '#3b82f6', bg: 'rgba(59,130,246,.1)' },
+  f: { label: 'fem.', color: '#ec4899', bg: 'rgba(236,72,153,.1)' },
+  mf: { label: 'm/f', color: '#8b5cf6', bg: 'rgba(139,92,246,.1)' },
+};
+
 function getFallbackWords(lang) {
   return FALLBACKS[lang] || FALLBACKS['Spanish'];
+}
+
+function GenderBadge({ gender }) {
+  if (!gender) return null;
+  const g = GENDER_LABELS[gender];
+  if (!g) return null;
+  return (
+    <span style={{
+      display: 'inline-block', fontSize: '.6rem', fontWeight: '700',
+      textTransform: 'uppercase', letterSpacing: '.06em',
+      color: g.color, background: g.bg, borderRadius: '4px',
+      padding: '1px 5px', marginLeft: '5px', verticalAlign: 'middle',
+    }}>
+      {g.label}
+    </span>
+  );
 }
 
 export default function WordPrep() {
@@ -31,6 +56,7 @@ export default function WordPrep() {
   const idx = sessionData.idx ?? 0;
   const accessToken = state.currentUser?.access_token;
   const nativeLang = state.profile?.native || 'English';
+  const hasGender = GENDERED_LANGS.includes(lang);
 
   const [words, setWords] = useState([]);
   const [exchanges, setExchanges] = useState([]);
@@ -71,6 +97,13 @@ export default function WordPrep() {
       ? `VARIATION REQUIRED: This learner has done this scenario ${replayCount} time(s). Give DIFFERENT words from before.`
       : '';
 
+    const genderInstruction = hasGender ? `
+GENDER RULES (important):
+- For nouns, include the article: "el café", "la mesa", "un amigo"
+- Set "gender" to "m" (masculine), "f" (feminine), or "mf" (words with both forms)
+- For words with both forms (like amigo/amiga, camarero/camarera), show BOTH in the "target" field separated by /: "amigo/amiga"
+- For phrases and non-nouns, omit the gender field or set it to null` : '';
+
     try {
       const apiKey = localStorage.getItem('perin_api_key') || '';
       const endpoint = accessToken ? `${WORKER_URL}/api/chat` : apiKey ? 'https://api.anthropic.com/v1/messages' : `${WORKER_URL}/api/chat`;
@@ -88,20 +121,21 @@ export default function WordPrep() {
         headers,
         body: JSON.stringify({
           model: 'claude-haiku-4-5-20251001',
-          max_tokens: 400,
+          max_tokens: 500,
           messages: [{
             role: 'user',
             content: `Give 4-5 essential words or phrases for a ${level} ${dialect} ${lang} learner about to practice: "${scenario.title}".
 
 Level guidance: ${levelGuide}
 ${replayNote}
+${genderInstruction}
 
 CRITICAL: The "target" field MUST be in ${lang}. The "english" field is the ${nativeLang} translation.
 
 Also give 2 short realistic sample exchanges. Both lines in ${lang}.
 
 Return ONLY raw JSON:
-{"words":[{"target":"[word in ${lang}]","pronunciation":"[phonetic]","english":"[${nativeLang} meaning]"}],"exchanges":[{"speaker":"LOCAL","line":"[line in ${lang}]","translation":"[${nativeLang}]"},{"speaker":"YOU","line":"[line in ${lang}]","translation":"[${nativeLang}]"}]}`,
+{"words":[{"target":"[word in ${lang}]","pronunciation":"[phonetic]","english":"[${nativeLang} meaning]","gender":"m|f|mf|null"}],"exchanges":[{"speaker":"LOCAL","line":"[line in ${lang}]","translation":"[${nativeLang}]"},{"speaker":"YOU","line":"[line in ${lang}]","translation":"[${nativeLang}]"}]}`,
           }],
         }),
       });
@@ -151,21 +185,50 @@ Return ONLY raw JSON:
           </div>
         ) : (
           <>
-            <div style={{ marginBottom: '8px', fontSize: '.68rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '.12em', color: 'var(--muted)' }}>Key words &amp; phrases</div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+              <div style={{ fontSize: '.68rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '.12em', color: 'var(--muted)' }}>Key words &amp; phrases</div>
+              {hasGender && (
+                <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                  {Object.entries(GENDER_LABELS).map(([k, v]) => (
+                    <span key={k} style={{ fontSize: '.6rem', fontWeight: '700', color: v.color, background: v.bg, borderRadius: '4px', padding: '1px 5px' }}>
+                      {v.label}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <div id="wordprep-cards" style={{ marginBottom: '12px', display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: '10px' }}>
               {words.map((w, i) => (
                 <div key={i} className="wordprep-card">
                   <div className="wpc-info">
-                    <div className="wpc-target">{w.target}</div>
+                    <div className="wpc-target">
+                      {w.target}
+                      {hasGender && w.gender && w.gender !== 'null' && (
+                        <GenderBadge gender={w.gender} />
+                      )}
+                    </div>
                     <div className="wpc-pronunciation">{w.pronunciation}</div>
                     <div className="wpc-english">{w.english}</div>
+                    {/* Show both forms note if m/f */}
+                    {hasGender && w.gender === 'mf' && w.target.includes('/') && (
+                      <div style={{ fontSize: '.62rem', color: 'var(--muted)', marginTop: '3px', fontStyle: 'italic' }}>
+                        both forms shown
+                      </div>
+                    )}
                   </div>
-                  <button className="wpc-play" onClick={() => speakWord(w.target, i)}>
+                  <button className="wpc-play" onClick={() => speakWord(w.target.split('/')[0], i)}>
                     {playingWord === i ? '⏵ Playing…' : '▶ Hear it'}
                   </button>
                 </div>
               ))}
             </div>
+
+            {hasGender && words.some(w => w.gender && w.gender !== 'null') && (
+              <div style={{ background: 'var(--cream)', borderRadius: '8px', padding: '8px 12px', marginBottom: '10px', fontSize: '.75rem', color: 'var(--muted)', lineHeight: '1.55' }}>
+                💡 <strong style={{ color: '#3b82f6' }}>masc.</strong> = masculine · <strong style={{ color: '#ec4899' }}>fem.</strong> = feminine · <strong style={{ color: '#8b5cf6' }}>m/f</strong> = both forms exist (e.g. amigo/amiga)
+              </div>
+            )}
 
             {exchanges.length > 0 && (
               <div style={{ marginTop: '14px' }}>
