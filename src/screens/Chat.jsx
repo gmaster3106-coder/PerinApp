@@ -43,6 +43,7 @@ RULES:
 5. No asterisk actions ever.
 6. If learner seems lost, switch to ${nativeLang} and give the exact phrase.
 7. At beginner level: after EVERY message, include a subtle hint of what to say next.
+8. NOUN GENDER: Always use the correct article with nouns (el/la in Spanish, le/la in French, il/la in Italian, o/a in Portuguese). This helps learners absorb gender naturally.
 
 RETENTION (required every reply):
 - End with: 🔑 [phrase] = [${nativeLang} meaning] | [phrase2] = [meaning]
@@ -87,7 +88,10 @@ function stripMd(t) {
     .replace(/\*\*(.+?)\*\*/g, '$1')
     .replace(/`(.+?)`/g, '$1')
     .replace(/^#{1,3} /gm, '')
+    .replace(/\(\s*\)/g, '')
+    .replace(/\[\s*\]/g, '')
     .replace(/\n\n/g, '\n')
+    .replace(/[ \t]{2,}/g, ' ')
     .trim();
 }
 
@@ -102,7 +106,13 @@ function parseRetention(text) {
     });
   }
   const shadowMatch = raw.match(/\u{1FAB6}\s*Try saying:\s*"([^"]+)"/u);
-  const mainText = stripMd(raw.replace(/\u{1F511}[^\n]*/gu, '').replace(/\u{1FAB6}[^\n]*/gu, '').trim());
+  // Remove entire lines containing retention emojis
+  const cleaned = raw
+    .split('\n')
+    .filter(line => !/\u{1F511}/u.test(line) && !/\u{1FAB6}/u.test(line))
+    .join('\n')
+    .trim();
+  const mainText = stripMd(cleaned);
   return { mainText, chips, shadow: shadowMatch?.[1] || '' };
 }
 

@@ -90,6 +90,7 @@ RULES:
 5. No asterisk actions ever.
 6. If learner seems lost, switch to ${e} and give the exact phrase.
 7. At beginner level: after EVERY message, include a subtle hint of what to say next.
+8. NOUN GENDER: Always use the correct article with nouns (el/la in Spanish, le/la in French, il/la in Italian, o/a in Portuguese). This helps learners absorb gender naturally.
 
 RETENTION (required every reply):
 - End with: 🔑 [phrase] = [${e} meaning] | [phrase2] = [meaning]
@@ -115,8 +116,10 @@ RECENT SESSIONS: The learner has recently practiced: ${k.join(", ")}. Reference 
 LEVEL: ${(o||"intermediate").toUpperCase()}
 ${u}
 
-`+Ty(l||"English")+x+h+v+S+f}function Es(e){return(e||"").replace(/\*[^*]+\*/g,"").replace(/\*\*(.+?)\*\*/g,"$1").replace(/`(.+?)`/g,"$1").replace(/^#{1,3} /gm,"").replace(/\n\n/g,`
-`).trim()}function Ny(e){const t=e||"",n=[],a=t.match(/\u{1F511}[^\n]+/gu);a&&a.forEach(s=>{s.replace(/^\u{1F511}/u,"").split("|").forEach(c=>{const u=c.trim();u&&n.push(u)})});const o=t.match(/\u{1FAB6}\s*Try saying:\s*"([^"]+)"/u);return{mainText:Es(t.replace(/\u{1F511}[^\n]*/gu,"").replace(/\u{1FAB6}[^\n]*/gu,"").trim()),chips:n,shadow:(o==null?void 0:o[1])||""}}function Iy(e){const t=e.match(/Your goal[:]\s*([^\n]+?)(?=\n|Try saying|$)/i),n=e.match(/Try saying(?:[^:]*)?[:]\s*["']?([^"'—\-\n]+?)["']?\s*[—\-]+\s*([^.\n]+)/i),a=e.search(/Your goal[:]/i),o=e.search(/Try saying/i),r=a>0?e.slice(0,a).trim():"";let s="";return o>0&&(s=e.slice(o).split(`
+`+Ty(l||"English")+x+h+v+S+f}function Es(e){return(e||"").replace(/\*[^*]+\*/g,"").replace(/\*\*(.+?)\*\*/g,"$1").replace(/`(.+?)`/g,"$1").replace(/^#{1,3} /gm,"").replace(/\(\s*\)/g,"").replace(/\[\s*\]/g,"").replace(/\n\n/g,`
+`).replace(/[ \t]{2,}/g," ").trim()}function Ny(e){const t=e||"",n=[],a=t.match(/\u{1F511}[^\n]+/gu);a&&a.forEach(l=>{l.replace(/^\u{1F511}/u,"").split("|").forEach(u=>{const d=u.trim();d&&n.push(d)})});const o=t.match(/\u{1FAB6}\s*Try saying:\s*"([^"]+)"/u),r=t.split(`
+`).filter(l=>!/\u{1F511}/u.test(l)&&!/\u{1FAB6}/u.test(l)).join(`
+`).trim();return{mainText:Es(r),chips:n,shadow:(o==null?void 0:o[1])||""}}function Iy(e){const t=e.match(/Your goal[:]\s*([^\n]+?)(?=\n|Try saying|$)/i),n=e.match(/Try saying(?:[^:]*)?[:]\s*["']?([^"'—\-\n]+?)["']?\s*[—\-]+\s*([^.\n]+)/i),a=e.search(/Your goal[:]/i),o=e.search(/Try saying/i),r=a>0?e.slice(0,a).trim():"";let s="";return o>0&&(s=e.slice(o).split(`
 `).slice(1).join(`
 `).trim()),{welcome:Es(r),goal:t?t[1].trim():"",phraseTarget:n?n[1].trim():"",phraseMeaning:n?n[2].trim():"",after:Es(s)}}function Lh({chips:e,lang:t,onSave:n}){const[a,o]=g.useState({});if(!(e!=null&&e.length))return null;function r(s){const{word:l,meaning:c}=jy(s),u=Nl(l,c,t);o(d=>({...d,[s]:u?"saved":"already"})),n==null||n(l,u)}return i.jsx("div",{className:"key-phrase-bar",children:e.map((s,l)=>i.jsxs("span",{style:{display:"flex",alignItems:"center",gap:4,flexWrap:"wrap"},children:[i.jsx("span",{className:"kp-chip",children:s}),a[s]?i.jsx("span",{style:{fontSize:".65rem",color:"#2e7d32",fontWeight:600},children:a[s]==="saved"?"✅":"✓"}):i.jsx("button",{onClick:()=>r(s),style:{background:"none",border:"1px solid var(--border)",borderRadius:6,padding:"1px 6px",fontSize:".65rem",color:"var(--muted)",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"},children:"💾"})]},l))})}function Bh(e){return(e||"").replace(/\*[^*\n]+\*/g,"").replace(/[ \t]{2,}/g," ").replace(/\n{3,}/g,`
 
