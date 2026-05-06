@@ -1,10 +1,11 @@
-import { useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext.jsx';
 import { JOURNEY_STAGES } from '../data/journey.js';
 import { SCENARIOS } from '../data/scenarios.js';
 import { CONNECTIONS_DATA } from '../data/connections.js';
 import { OB_DIALECTS } from '../data/languages.js';
+import { getDailyFact } from '../data/cultureFacts.js';
 
 const LANG_FLAGS = {
   Spanish: '🇪🇸', French: '🇫🇷', Italian: '🇮🇹', Portuguese: '🇵🇹',
@@ -312,6 +313,33 @@ function DailyMission({ sessions, navigate, nextJourney }) {
   );
 }
 
+function CultureCard({ dialect, lang }) {
+  const [expanded, setExpanded] = React.useState(false);
+  const fact = getDailyFact(dialect) || getDailyFact(lang);
+  if (!fact) return null;
+  return (
+    <div onClick={() => setExpanded(e => !e)} style={{ background: 'linear-gradient(135deg,var(--card),rgba(26,86,219,.03))', border: '1.5px solid var(--border)', borderRadius: '14px', padding: '14px 16px', marginBottom: '10px', cursor: 'pointer' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <span style={{ fontSize: '1.8rem', flexShrink: 0 }}>{fact.emoji}</span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: '.6rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--accent)', marginBottom: '3px' }}>Daily Culture</div>
+          <div style={{ fontSize: '.88rem', fontWeight: '700', color: 'var(--ink)', lineHeight: '1.3' }}>{fact.headline}</div>
+        </div>
+        <span style={{ color: 'var(--muted)', fontSize: '1rem', flexShrink: 0, transition: 'transform .2s', transform: expanded ? 'rotate(90deg)' : 'none' }}>›</span>
+      </div>
+      {expanded && (
+        <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid var(--border)' }}>
+          <p style={{ fontSize: '.82rem', color: 'var(--ink)', lineHeight: '1.6', marginBottom: '10px' }}>{fact.body}</p>
+          <div style={{ background: 'rgba(26,86,219,.06)', borderRadius: '8px', padding: '8px 12px', borderLeft: '3px solid var(--accent)' }}>
+            <div style={{ fontSize: '.65rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--accent)', marginBottom: '3px' }}>💬 In conversations</div>
+            <p style={{ fontSize: '.78rem', color: 'var(--ink)', lineHeight: '1.5', margin: 0 }}>{fact.tip}</p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Dashboard() {
   const { state, dispatch } = useApp();
   const navigate = useNavigate();
@@ -404,6 +432,8 @@ export default function Dashboard() {
         )}
 
         <DailyMission sessions={profile?.sessions || 0} navigate={navigate} nextJourney={next} />
+
+        {lang && <CultureCard dialect={dialect} lang={lang} />}
 
         {next && (
           <div className="dash-continue-card" onClick={continueJourney}
