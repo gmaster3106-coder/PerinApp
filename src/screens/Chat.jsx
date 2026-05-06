@@ -17,18 +17,25 @@ function getCultureTip(dialect, lang, scenarioTitle) {
     || CULTURAL_CONTEXT?.[lang]?.[scenarioTitle];
   if (!ctx) return null;
 
-  // Split into sentences and find the most culturally specific one
-  // Skip sentences that are too generic (less than 40 chars or contain only common words)
-  const sentences = ctx.split(/(?<=[.!?])\s+/).filter(s => s.length > 40);
+  const sentences = ctx.split(/(?<=[.!?])s+/).filter(s => s.length > 45);
   if (!sentences.length) return null;
 
-  // Prefer sentences with dialect-specific signals
-  const specific = sentences.find(s =>
-    /\b(only|never|always|unlike|specific|unique|local|tradition|custom|expect|considered|normal|rude|polite|typical|common|usually|often|instead)\b/i.test(s)
-  ) || sentences[0];
+  // Prefer sentences mentioning the dialect by name
+  const dialectName = (dialect || lang).split(' ')[0];
+  const namedSentence = sentences.find(s =>
+    s.toLowerCase().includes(dialectName.toLowerCase())
+  );
+  if (namedSentence) return namedSentence.trim();
 
-  return specific.trim();
+  // Prefer sentences with strong cultural specificity
+  const hasSignal = s => /never|only after|considered rude|considered insulting|unlike|avoid|forbidden|tradition|marks you|signals you|exclusively/i.test(s);
+  const specific = sentences.find(hasSignal);
+  if (specific) return specific.trim();
+
+  // Last sentence tends to be most actionable
+  return sentences[sentences.length - 1].trim();
 }
+
 
 function CultureTipBanner({ dialect, lang, scenarioTitle, onDismiss }) {
   const tip = getCultureTip(dialect, lang, scenarioTitle);
@@ -162,7 +169,7 @@ function parseRetention(text) {
 
 function parseOpeningMessage(text) {
   const goalMatch = text.match(/Your goal[:]\s*([^\n]+?)(?=\n|Try saying|$)/i);
-  const phraseMatch = text.match(/Try saying(?:[^:]*)?[:]\s*["']?([^"'—\-\n]+?)["']?\s*[—\-]+\s*([^.\n]+)/i);
+  const phraseMatch = text.match(/Try saying(?:[^:]*)?[:]\s*["']?([^"'—\-\n]+?)["']?(?:\s*[—\-]+\s*|\n+)([^.\n]+)/i);
   const goalIdx = text.search(/Your goal[:]/i);
   const phraseIdx = text.search(/Try saying/i);
   const welcomeText = goalIdx > 0 ? text.slice(0, goalIdx).trim() : '';
@@ -569,7 +576,7 @@ RULES:
 
       scrollToBottom();
 
-      if (isInit && level === 'beginner' && mode !== 'freechat' && !fullText.toLowerCase().includes('try saying')) {
+      if (isInit && level === 'beginner' && mode !== 'freechat' && !parseOpeningMessage(fullText).phraseTarget) {
         setTimeout(() => {
           setMessages(prev => prev.filter(m => !m.isOpening));
           callClaude(true);
