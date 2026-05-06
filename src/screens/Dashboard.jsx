@@ -317,25 +317,29 @@ function getScenarioRevisitSuggestion(lang, dialect) {
   try {
     const completed = JSON.parse(localStorage.getItem('perin_completed') || '{}');
     const playCounts = JSON.parse(localStorage.getItem(`perin_play_counts_${lang}_${dialect}`) || '{}');
-    // Find scenarios done 7+ days ago with only 1 play
-    const oneWeekAgo = Date.now() - 7 * 86400000;
+    // Find completed scenarios played <=2 times — worth revisiting
     const candidates = Object.entries(completed)
       .filter(([key, val]) => {
         if (!val) return false;
-        const [l, d] = key.split('_');
-        return l === lang && d === dialect;
+        const parts = key.split('_');
+        // key format: lang_dialect_level_idx
+        return parts[0] === lang && parts[1] === dialect;
       })
-      .filter(([key]) => {
-        const scenarioTitle = playCounts[key];
-        // Only suggest if played <=2 times
-        return !scenarioTitle || scenarioTitle <= 2;
-      });
+      .map(([key]) => {
+        const parts = key.split('_');
+        const level = parts[2];
+        const idx = parseInt(parts[3]);
+        const scenario = SCENARIOS[level]?.[idx];
+        const playCount = playCounts[scenario?.title] || 1;
+        return { key, level, idx, scenario, playCount };
+      })
+      .filter(c => c.scenario && c.playCount <= 2);
     if (!candidates.length) return null;
-    // Pick one at random seeded by day
-    const seed = new Date().toDateString();
+    // Rotate daily
+    const seed = new Date().toDateString() + lang + dialect;
     let hash = 0;
     for (const ch of seed) hash = (hash * 31 + ch.charCodeAt(0)) & 0xffffffff;
-    return candidates[Math.abs(hash) % candidates.length][0];
+    return candidates[Math.abs(hash) % candidates.length];
   } catch { return null; }
 }
 
@@ -456,6 +460,7 @@ export default function Dashboard() {
   const next = lang ? getNextJourneyScenario(lang, dialect) : null;
   const anyDone = lang && JOURNEY_STAGES.some(s => s.indices.some(idx => isScenarioDone(lang, dialect, s.level, idx)));
   const stageProgress = lang ? getCurrentStageProgress(lang, dialect) : null;
+  const revisit = lang ? getScenarioRevisitSuggestion(lang, dialect) : null;
 
   useMemo(() => {
     if (!lang) return;
@@ -601,6 +606,28 @@ export default function Dashboard() {
               )}
             </div>
             <span style={{ color: 'var(--accent)', fontSize: '1.2rem', flexShrink: 0 }}>›</span>
+          </div>
+        )}
+
+        {/* Scenario revisit suggestion */}
+        {revisit && revisit.scenario && (
+          <div
+            onClick={() => navigate('/wordprep', { state: { scenario: revisit.scenario, level: revisit.level, idx: revisit.idx, lang, dialect } })}
+            style={{ background: 'var(--card)', border: '1.5px solid var(--border)', borderRadius: '14px', padding: '12px 16px', marginBottom: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '12px' }}
+          >
+            <span style={{ fontSize: '1.4rem', flexShrink: 0 }}>{revisit.scenario.icon || '🔁'}</span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: '.62rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--muted)', marginBottom: '2px' }}>
+                🔁 Worth revisiting
+              </div>
+              <div style={{ fontSize: '.88rem', fontWeight: '700', color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {revisit.scenario.title}
+              </div>
+              <div style={{ fontSize: '.72rem', color: 'var(--muted)', marginTop: '1px' }}>
+                You've only done this once — try it again
+              </div>
+            </div>
+            <span style={{ color: 'var(--muted)', fontSize: '1.1rem', flexShrink: 0 }}>›</span>
           </div>
         )}
 
