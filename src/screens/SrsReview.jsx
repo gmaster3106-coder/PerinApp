@@ -4,7 +4,10 @@ import { useApp } from '../context/AppContext.jsx';
 import { getValidToken } from '../utils/getValidToken.js';
 
 const WORKER_URL = 'https://perin-proxy.gmaster3106.workers.dev';
-const SRS_INTERVALS = [1, 3, 7, 14, 30];
+
+// SRS intervals in days per strength level
+const SRS_INTERVALS =  [1, 3, 7, 14, 30];
+const SRS_ALMOST    =  [1, 2, 4, 7, 14]; // shorter intervals for "almost"
 
 function getStrengthLabel(s) {
   return ['🌱 New', '📖 Learning', '🔄 Familiar', '💪 Strong', '⭐ Mastered'][s || 0];
@@ -27,6 +30,13 @@ function getDueWords(vocab) {
 function applyCorrect(v) {
   const strength = Math.min(4, (v.strength || 0) + 1);
   return { ...v, strength, interval: SRS_INTERVALS[strength] || 30, nextReview: Date.now() + (SRS_INTERVALS[strength] || 30) * 86400000, reviews: (v.reviews || 0) + 1 };
+}
+
+function applyAlmost(v) {
+  // Stay at same strength but review sooner
+  const strength = v.strength || 0;
+  const interval = SRS_ALMOST[strength] || 2;
+  return { ...v, strength, interval, nextReview: Date.now() + interval * 86400000, reviews: (v.reviews || 0) + 1 };
 }
 
 function applyWrong(v) {
@@ -52,21 +62,39 @@ export default function SrsReview() {
   const lang       = activeLang?.lang    || '';
   const dialect    = activeLang?.dialect || lang;
 
-  const [phase, setPhase]       = useState('empty');
-  const [queue, setQueue]       = useState([]);
-  const [index, setIndex]       = useState(0);
-  const [correct, setCorrect]   = useState(0);
-  const [examples, setExamples] = useState(null);
+  const [phase, setPhase]         = useState('empty');
+  const [queue, setQueue]         = useState([]);
+  const [index, setIndex]         = useState(0);
+  const [correct, setCorrect]     = useState(0);
+  const [examples, setExamples]   = useState(null);
   const [remainingDue, setRemainingDue] = useState(0);
+  const [filterLang, setFilterLang] = useState('all');
+
+  // Get unique languages from vocab
+  const allVocab = loadVocab();
+  const vocabLangs = ['all', ...new Set(allVocab.map(v => v.lang).filter(Boolean))];
 
   useEffect(() => {
+    loadQueue('all');
+  }, []);
+
+  function loadQueue(langFilter) {
     const vocab = loadVocab();
-    const due = getDueWords(vocab);
+    const filtered = langFilter === 'all' ? vocab : vocab.filter(v => v.lang === langFilter);
+    const due = getDueWords(filtered);
     if (!due.length) { setPhase('empty'); return; }
     setQueue(due);
     setRemainingDue(due.length);
+    setIndex(0);
+    setCorrect(0);
+    setExamples(null);
     setPhase('card');
-  }, []);
+  }
+
+  function handleFilterChange(newLang) {
+    setFilterLang(newLang);
+    loadQueue(newLang);
+  }
 
   const loadExamples = useCallback(async (word, meaning) => {
     if (!lang) return;
@@ -78,7 +106,7 @@ export default function SrsReview() {
       const res = await fetch(`${WORKER_URL}/api/chat`, {
         method: 'POST', headers,
         body: JSON.stringify({
-          model: 'claude-sonnet-4-5', max_tokens: 150,
+          model: 'claude-haiku-4-5-20251001', max_tokens: 150,
           messages: [{ role: 'user', content: `Give 2 short natural example sentences using "${word}" (${meaning}) in ${dialect} ${lang}. Each sentence max 8 words. Return ONLY JSON: {"examples":[{"s":"sentence","t":"English translation"}]}` }],
         }),
       });
@@ -97,17 +125,28 @@ export default function SrsReview() {
     if (v?.word && v?.meaning) loadExamples(v.word, v.meaning);
   }
 
-  function answer(wasCorrect) {
+  function answer(result) {
+    // result: 'correct' | 'almost' | 'wrong'
     const v = queue[index];
-    const updated = wasCorrect ? applyCorrect(v) : applyWrong(v);
+    let updated;
+    if (result === 'correct') {
+      updated = applyCorrect(v);
+      setCorrect(c => c + 1);
+    } else if (result === 'almost') {
+      updated = applyAlmost(v);
+    } else {
+      updated = applyWrong(v);
+    }
+
     const allVocab = loadVocab();
     const idx = allVocab.findIndex(sv => sv.word === v.word && sv.lang === v.lang);
     if (idx !== -1) allVocab[idx] = updated;
     saveVocab(allVocab);
-    if (wasCorrect) setCorrect(c => c + 1);
+
     const nextIndex = index + 1;
     if (nextIndex >= queue.length) {
-      const xp = (wasCorrect ? correct + 1 : correct) * 5;
+      const finalCorrect = result === 'correct' ? correct + 1 : correct;
+      const xp = finalCorrect * 5;
       dispatch({ type: 'AWARD_XP', payload: xp });
       markMissionDoneIfMatch(['srs', 'vocab', 'vocabquiz']);
       setRemainingDue(getDueWords(loadVocab()).length);
@@ -120,10 +159,7 @@ export default function SrsReview() {
   }
 
   function restart() {
-    const due = getDueWords(loadVocab());
-    if (!due.length) { setPhase('empty'); return; }
-    setQueue(due); setIndex(0); setCorrect(0); setExamples(null);
-    setRemainingDue(due.length); setPhase('card');
+    loadQueue(filterLang);
   }
 
   if (phase === 'empty') {
@@ -131,6 +167,10 @@ export default function SrsReview() {
       <div className="screen active" style={{ alignItems: 'center', padding: '28px 16px 60px' }}>
         <div className="fib-wrap">
           <Header />
+          {/* Language filter even on empty state */}
+          {vocabLangs.length > 2 && (
+            <LangFilter langs={vocabLangs} current={filterLang} onChange={handleFilterChange} />
+          )}
           <div style={{ textAlign: 'center', padding: '48px 16px' }}>
             <div style={{ fontSize: '3rem', marginBottom: 12 }}>🎉</div>
             <p style={{ fontWeight: 700, fontSize: '1.1rem', marginBottom: 8 }}>Nothing due for review!</p>
@@ -178,6 +218,12 @@ export default function SrsReview() {
     <div className="screen active" style={{ alignItems: 'center', padding: '28px 16px 60px' }}>
       <div className="fib-wrap">
         <Header />
+
+        {/* Language filter */}
+        {vocabLangs.length > 2 && (
+          <LangFilter langs={vocabLangs} current={filterLang} onChange={handleFilterChange} />
+        )}
+
         <div className="fib-card">
           <div className="fib-progress">
             {queue.map((_, i) => <div key={i} className={`fib-progress-dot${i < index ? ' done' : ''}`} />)}
@@ -194,14 +240,64 @@ export default function SrsReview() {
                 <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--ink)' }}>{v.meaning}</div>
               </div>
               <Examples examples={examples} />
-              <div style={{ display: 'flex', gap: 10 }}>
-                <button className="fib-next-btn" onClick={() => answer(false)} style={{ flex: 1, background: '#fce8e8', color: 'var(--danger)', border: '2px solid var(--danger)' }}>❌ Forgot</button>
-                <button className="fib-next-btn" onClick={() => answer(true)} style={{ flex: 1, background: '#e8f5e9', color: '#2e7d32', border: '2px solid #4caf50' }}>✅ Got it</button>
+
+              {/* 3-button rating */}
+              <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+                <button
+                  className="fib-next-btn"
+                  onClick={() => answer('wrong')}
+                  style={{ flex: 1, background: '#fce8e8', color: 'var(--danger)', border: '2px solid var(--danger)', fontSize: '.78rem', padding: '10px 6px' }}
+                >
+                  ❌ Forgot
+                </button>
+                <button
+                  className="fib-next-btn"
+                  onClick={() => answer('almost')}
+                  style={{ flex: 1, background: '#fef9c3', color: '#92400e', border: '2px solid #f59e0b', fontSize: '.78rem', padding: '10px 6px' }}
+                >
+                  🤔 Almost
+                </button>
+                <button
+                  className="fib-next-btn"
+                  onClick={() => answer('correct')}
+                  style={{ flex: 1, background: '#e8f5e9', color: '#2e7d32', border: '2px solid #4caf50', fontSize: '.78rem', padding: '10px 6px' }}
+                >
+                  ✅ Got it
+                </button>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: '.62rem', color: 'var(--muted)', padding: '0 2px' }}>
+                <span>Reset to day 1</span>
+                <span>Review sooner</span>
+                <span>Advance level</span>
               </div>
             </>
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+function LangFilter({ langs, current, onChange }) {
+  return (
+    <div style={{ display: 'flex', gap: 6, marginBottom: 14, flexWrap: 'wrap' }}>
+      {langs.map(l => (
+        <button
+          key={l}
+          onClick={() => onChange(l)}
+          style={{
+            padding: '4px 12px', borderRadius: 20, border: '1.5px solid',
+            borderColor: current === l ? 'var(--accent)' : 'var(--border)',
+            background: current === l ? 'var(--accent)' : 'var(--card)',
+            color: current === l ? '#fff' : 'var(--muted)',
+            fontFamily: "'DM Sans',sans-serif", fontSize: '.72rem', fontWeight: 600,
+            cursor: 'pointer', transition: 'all .15s',
+            textTransform: l === 'all' ? 'capitalize' : 'none',
+          }}
+        >
+          {l === 'all' ? 'All languages' : l}
+        </button>
+      ))}
     </div>
   );
 }
