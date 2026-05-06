@@ -322,7 +322,9 @@ function CultureCard({ dialect, lang }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
         <span style={{ fontSize: '1.8rem', flexShrink: 0 }}>{fact.emoji}</span>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: '.6rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--accent)', marginBottom: '3px' }}>Daily Culture</div>
+          <div style={{ fontSize: '.6rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--accent)', marginBottom: '3px' }}>
+              Daily Culture · {dialect !== lang ? dialect : lang}
+            </div>
           <div style={{ fontSize: '.88rem', fontWeight: '700', color: 'var(--ink)', lineHeight: '1.3' }}>{fact.headline}</div>
         </div>
         <span style={{ color: 'var(--muted)', fontSize: '1rem', flexShrink: 0, transition: 'transform .2s', transform: expanded ? 'rotate(90deg)' : 'none' }}>›</span>

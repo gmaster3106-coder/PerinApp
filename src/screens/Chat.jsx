@@ -17,22 +17,30 @@ function getCultureTip(dialect, lang, scenarioTitle) {
     || CULTURAL_CONTEXT?.[lang]?.[scenarioTitle];
   if (!ctx) return null;
 
-  const sentences = ctx.split(/(?<=[.!?])s+/).filter(s => s.length > 45);
+  // Normalize separators so we can split reliably
+  const normalized = ctx
+    .replace(/ -- /g, '. ')
+    .replace(/ — /g, '. ')
+    .replace(/s+/g, ' ')
+    .trim();
+
+  const sentences = normalized.split(/(?<=[.!?])s+/).filter(s => s.trim().length > 30);
   if (!sentences.length) return null;
 
-  // Prefer sentences mentioning the dialect by name
   const dialectName = (dialect || lang).split(' ')[0];
+
+  // 1. Prefer sentences that name the dialect — most specific
   const namedSentence = sentences.find(s =>
     s.toLowerCase().includes(dialectName.toLowerCase())
   );
   if (namedSentence) return namedSentence.trim();
 
-  // Prefer sentences with strong cultural specificity
-  const hasSignal = s => /never|only after|considered rude|considered insulting|unlike|avoid|forbidden|tradition|marks you|signals you|exclusively/i.test(s);
-  const specific = sentences.find(hasSignal);
-  if (specific) return specific.trim();
+  // 2. Prefer sentences with hard cultural rules
+  const hasRule = s => /\b(never|don't|avoid|forbidden|only after|considered rude|considered insulting|marks you|signals you|not acceptable|expected to|always say|must say)\b/i.test(s);
+  const ruleSentence = sentences.find(hasRule);
+  if (ruleSentence) return ruleSentence.trim();
 
-  // Last sentence tends to be most actionable
+  // 3. Last sentence — tends to be most actionable
   return sentences[sentences.length - 1].trim();
 }
 
