@@ -103,6 +103,7 @@ RULES:
 6. If learner seems lost, switch to ${nativeLang} and give the exact phrase.
 7. At beginner level: after EVERY message, include a subtle hint of what to say next.
 8. NOUN GENDER: Always use the correct article with nouns (el/la in Spanish, le/la in French, il/la in Italian, o/a in Portuguese). This helps learners absorb gender naturally.
+9. CULTURAL MOMENTS: When a culturally specific custom, social norm, or local practice comes up naturally, briefly note it in ${nativeLang} using: "(Cultural note: [one sentence])". Max once every 4 exchanges, only when genuinely relevant — never forced.
 
 RETENTION (required every reply):
 - End with: 🔑 [phrase] = [${nativeLang} meaning] | [phrase2] = [meaning]
@@ -128,6 +129,16 @@ function buildSystemPrompt(config, vocab) {
   const motivNote = motivation ? `\n\nLEARNER: Their reason for learning ${lang}: "${motivation}".` : '';
   const contextNote = config.context ? `\n\nREADING CONTEXT: The learner just read this text: "${config.context.slice(0, 300)}". Discuss it naturally.` : '';
 
+  // Inject dialect-specific cultural context for scene mode
+  let sceneCultureNote = '';
+  if (mode === 'scene' && scenario?.title) {
+    const sceneCtx = CULTURAL_CONTEXT?.[dialect]?.[scenario.title]
+      || CULTURAL_CONTEXT?.[lang]?.[scenario.title];
+    if (sceneCtx) {
+      sceneCultureNote = `\n\nCULTURAL CONTEXT FOR THIS SCENE: ${sceneCtx} Use this to make your character and reactions feel authentically ${dialect || lang}.`;
+    }
+  }
+
   let historyNote = '';
   try {
     const history = JSON.parse(localStorage.getItem('perin_history') || '[]');
@@ -138,7 +149,7 @@ function buildSystemPrompt(config, vocab) {
   } catch { /* silent */ }
 
   const introText = scenarioTitle ? `You are a character in the scenario: "${scenarioTitle}". ${scenario?.desc || ''}` : '';
-  return introText + dialectNote + `\n\nLEVEL: ${(level || 'intermediate').toUpperCase()}\n${levelInstruction}` + '\n\n' + getBasePrompt(nativeLang || 'English') + scenarioGuardrail + vocabList + motivNote + contextNote + historyNote;
+  return introText + dialectNote + `\n\nLEVEL: ${(level || 'intermediate').toUpperCase()}\n${levelInstruction}` + '\n\n' + getBasePrompt(nativeLang || 'English') + scenarioGuardrail + vocabList + motivNote + contextNote + sceneCultureNote + historyNote;
 }
 
 function stripMd(t) {

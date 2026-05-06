@@ -5,7 +5,7 @@ import { JOURNEY_STAGES } from '../data/journey.js';
 import { SCENARIOS } from '../data/scenarios.js';
 import { CONNECTIONS_DATA } from '../data/connections.js';
 import { OB_DIALECTS } from '../data/languages.js';
-import { getDailyFact } from '../data/cultureFacts.js';
+import { getDailyFact, CULTURE_FACTS } from '../data/cultureFacts.js';
 
 const LANG_FLAGS = {
   Spanish: '🇪🇸', French: '🇫🇷', Italian: '🇮🇹', Portuguese: '🇵🇹',
@@ -342,11 +342,72 @@ function CultureCard({ dialect, lang }) {
   );
 }
 
+function CulturalOnboardingModal({ dialect, lang, onClose }) {
+  const facts = CULTURE_FACTS[dialect] || CULTURE_FACTS[lang] || [];
+  const highlights = facts.slice(0, 3);
+  const dialectLabel = dialect !== lang ? dialect : lang;
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, background: 'rgba(0,0,0,.55)', zIndex: 200,
+      display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+    }}>
+      <div style={{
+        background: 'var(--card)', borderRadius: '20px 20px 0 0', padding: '24px 20px 40px',
+        width: '100%', maxWidth: '600px', maxHeight: '80vh', overflowY: 'auto',
+      }}>
+        <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+          <div style={{ fontSize: '2.5rem', marginBottom: '10px' }}>
+            {facts[0]?.emoji || '🌍'}
+          </div>
+          <div style={{ fontFamily: "'Playfair Display',serif", fontSize: '1.3rem', fontWeight: '700', marginBottom: '6px' }}>
+            Welcome to {dialectLabel}
+          </div>
+          <p style={{ fontSize: '.82rem', color: 'var(--muted)', lineHeight: 1.5 }}>
+            A few things that'll help your conversations feel natural from day one.
+          </p>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '20px' }}>
+          {highlights.map((fact, i) => (
+            <div key={i} style={{
+              background: 'var(--cream)', borderRadius: '12px', padding: '14px 16px',
+              display: 'flex', gap: '12px', alignItems: 'flex-start',
+            }}>
+              <span style={{ fontSize: '1.5rem', flexShrink: 0 }}>{fact.emoji}</span>
+              <div>
+                <div style={{ fontSize: '.85rem', fontWeight: '700', color: 'var(--ink)', marginBottom: '4px' }}>
+                  {fact.headline}
+                </div>
+                <div style={{ fontSize: '.76rem', color: 'var(--muted)', lineHeight: 1.5 }}>
+                  {fact.tip}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <button
+          onClick={onClose}
+          style={{
+            width: '100%', background: 'var(--accent)', color: '#fff', border: 'none',
+            borderRadius: '14px', padding: '14px', fontFamily: "'DM Sans',sans-serif",
+            fontSize: '.95rem', fontWeight: '700', cursor: 'pointer',
+          }}
+        >
+          Let's start →
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function Dashboard() {
   const { state, dispatch } = useApp();
   const navigate = useNavigate();
   const [drillsOpen, setDrillsOpen] = useState(false);
   const [unlockedBanner, setUnlockedBanner] = useState(() => null);
+  const [onboarding, setOnboarding] = useState(null);
 
   const profile = state.profile;
   const languages = state.languages || [];
@@ -390,6 +451,12 @@ export default function Dashboard() {
     const updated = [...languages, newLang];
     dispatch({ type: 'SET_LANGUAGES', payload: updated });
     dispatch({ type: 'SET_ACTIVE_LANG', payload: newLang });
+    // Show cultural onboarding if facts exist for this dialect
+    const d = newLang.dialect || newLang.lang;
+    const l = newLang.lang;
+    if (CULTURE_FACTS[d] || CULTURE_FACTS[l]) {
+      setOnboarding({ dialect: d, lang: l });
+    }
   }
 
   function continueJourney() {
@@ -399,7 +466,14 @@ export default function Dashboard() {
 
   return (
     <div className="screen active" id="screen-setup">
-      <div style={{ width: '100%', maxWidth: '600px' }}>
+      {onboarding && (
+          <CulturalOnboardingModal
+            dialect={onboarding.dialect}
+            lang={onboarding.lang}
+            onClose={() => setOnboarding(null)}
+          />
+        )}
+        <div style={{ width: '100%', maxWidth: '600px' }}>
 
         <div className="dash-top">
           <div>
