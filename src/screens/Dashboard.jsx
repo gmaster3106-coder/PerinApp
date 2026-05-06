@@ -5,7 +5,7 @@ import { JOURNEY_STAGES } from '../data/journey.js';
 import { SCENARIOS } from '../data/scenarios.js';
 import { CONNECTIONS_DATA } from '../data/connections.js';
 import { OB_DIALECTS } from '../data/languages.js';
-import { getDailyFact, CULTURE_FACTS } from '../data/cultureFacts.js';
+import { getDailyFact, CULTURE_FACTS, getFactsForDialect } from '../data/cultureFacts.js';
 
 const LANG_FLAGS = {
   Spanish: '🇪🇸', French: '🇫🇷', Italian: '🇮🇹', Portuguese: '🇵🇹',
@@ -315,7 +315,7 @@ function DailyMission({ sessions, navigate, nextJourney }) {
 
 function CultureCard({ dialect, lang }) {
   const [expanded, setExpanded] = React.useState(false);
-  const fact = getDailyFact(dialect) || getDailyFact(lang);
+  const fact = getDailyFact(dialect, lang);
   if (!fact) return null;
   return (
     <div onClick={() => setExpanded(e => !e)} style={{ background: 'linear-gradient(135deg,var(--card),rgba(26,86,219,.03))', border: '1.5px solid var(--border)', borderRadius: '14px', padding: '14px 16px', marginBottom: '10px', cursor: 'pointer' }}>
@@ -454,7 +454,7 @@ export default function Dashboard() {
     // Show cultural onboarding if facts exist for this dialect
     const d = newLang.dialect || newLang.lang;
     const l = newLang.lang;
-    if (CULTURE_FACTS[d] || CULTURE_FACTS[l]) {
+    if (getFactsForDialect(d, l)) {
       setOnboarding({ dialect: d, lang: l });
     }
   }

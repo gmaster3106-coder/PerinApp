@@ -601,10 +601,57 @@ export const CULTURE_FACTS = {
 };
 
 // Get today's fact index — rotates daily, specific to dialect
-export function getDailyFact(dialect) {
-  const facts = CULTURE_FACTS[dialect];
-  if (!facts || !facts.length) return null;
-  const seed = new Date().toDateString() + dialect;
+// getDailyFact moved to after alias definitions
+// Dialect aliases — maps variant names to existing fact keys
+const DIALECT_ALIASES = {
+  'Colombia': 'Spanish',
+  'Colombian': 'Spanish',
+  'Sicilian': 'Italian',
+  'Sicily': 'Italian',
+  'Portugal': 'Portuguese',
+  'European Portuguese': 'Portuguese',
+  'Mexican': 'Mexico',
+  'Mexican Spanish': 'Mexico',
+  'Castilian Spanish': 'Castilian',
+  'Spain': 'Castilian',
+  'Haitian Creole': 'Creole',
+  'Haiti': 'Creole',
+  'Brazil': 'Brazilian',
+  'Brazilian Portuguese': 'Brazilian',
+  'Paris': 'Parisian',
+  'France': 'French',
+  'Naples': 'Neapolitan',
+  'Italian': 'Italian',
+};
+
+// Resolve a dialect/lang string to a facts array
+export function getFactsForDialect(dialect, lang) {
+  const candidates = [dialect, lang, DIALECT_ALIASES[dialect], DIALECT_ALIASES[lang]];
+  for (const key of candidates) {
+    if (key && CULTURE_FACTS[key]?.length) return { key, facts: CULTURE_FACTS[key] };
+  }
+  return null;
+}
+
+// Get N facts for pre-quiz or onboarding (different from daily — picks varied ones)
+export function getPreQuizFacts(dialect, lang, count = 3) {
+  const resolved = getFactsForDialect(dialect, lang);
+  if (!resolved) return [];
+  const { facts } = resolved;
+  // Spread picks evenly across the array for variety
+  const step = Math.max(1, Math.floor(facts.length / count));
+  const picked = [];
+  for (let i = 0; i < count && i * step < facts.length; i++) {
+    picked.push(facts[i * step]);
+  }
+  return picked;
+}
+
+export function getDailyFact(dialect, lang) {
+  const resolved = getFactsForDialect(dialect, lang);
+  if (!resolved) return null;
+  const { facts } = resolved;
+  const seed = new Date().toDateString() + (dialect || lang || '');
   let hash = 0;
   for (const ch of seed) hash = (hash * 31 + ch.charCodeAt(0)) & 0xffffffff;
   return facts[Math.abs(hash) % facts.length];

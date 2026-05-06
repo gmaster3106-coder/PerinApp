@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext.jsx';
 import { QUIZ_DATA } from '../data/quizData.js';
+import { getPreQuizFacts } from '../data/cultureFacts.js';
 
 // ─── dialect → quiz key resolver ────────────────────────────────────────────
 const DIALECT_MAP = {
@@ -29,7 +30,6 @@ function resolveQuizKey(lang, dialect) {
       if (QUIZ_DATA[val]) return val;
     }
   }
-  // Fallback: try lang
   for (const [key, val] of Object.entries(DIALECT_MAP)) {
     if (l === key || l.includes(key)) {
       if (QUIZ_DATA[val]) return val;
@@ -69,6 +69,80 @@ function badge(p) {
   return '🌱 Keep Learning';
 }
 
+// ─── Pre-quiz culture cards ──────────────────────────────────────────────────
+function PreQuizCards({ facts, dialectLabel, onStart }) {
+  const [cardIdx, setCardIdx] = useState(0);
+  const isLast = cardIdx === facts.length - 1;
+
+  return (
+    <div className="screen active" id="screen-vocab-quiz" style={{ alignItems: 'center', padding: '28px 16px 60px' }}>
+      <div className="quiz-wrap">
+        <div style={{ marginBottom: 16 }}>
+          <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: '1.45rem', marginBottom: 4 }}>
+            🧠 Culture Quiz
+          </h2>
+          <p style={{ color: 'var(--muted)', fontSize: '.85rem' }}>
+            Before you start — a few things worth knowing about {dialectLabel}.
+          </p>
+        </div>
+
+        {/* Progress dots */}
+        <div style={{ display: 'flex', gap: '6px', marginBottom: '20px', justifyContent: 'center' }}>
+          {facts.map((_, i) => (
+            <div key={i} style={{
+              width: i === cardIdx ? '20px' : '8px', height: '8px',
+              borderRadius: '4px', transition: 'all .3s',
+              background: i <= cardIdx ? 'var(--accent)' : 'var(--border)',
+            }} />
+          ))}
+        </div>
+
+        {/* Card */}
+        <div style={{
+          background: 'var(--card)', border: '1.5px solid var(--border)',
+          borderRadius: '16px', padding: '24px 20px', marginBottom: '20px',
+          minHeight: '220px', display: 'flex', flexDirection: 'column',
+        }}>
+          <div style={{ fontSize: '2.8rem', marginBottom: '14px', textAlign: 'center' }}>
+            {facts[cardIdx].emoji}
+          </div>
+          <div style={{ fontFamily: "'Playfair Display',serif", fontSize: '1.1rem', fontWeight: '700', color: 'var(--ink)', marginBottom: '12px', textAlign: 'center' }}>
+            {facts[cardIdx].headline}
+          </div>
+          <p style={{ fontSize: '.84rem', color: 'var(--muted)', lineHeight: '1.6', marginBottom: '14px', flex: 1 }}>
+            {facts[cardIdx].body}
+          </p>
+          <div style={{ background: 'rgba(26,86,219,.06)', borderRadius: '10px', padding: '10px 14px', borderLeft: '3px solid var(--accent)' }}>
+            <div style={{ fontSize: '.62rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--accent)', marginBottom: '4px' }}>
+              💬 In conversations
+            </div>
+            <p style={{ fontSize: '.78rem', color: 'var(--ink)', lineHeight: '1.5', margin: 0 }}>
+              {facts[cardIdx].tip}
+            </p>
+          </div>
+        </div>
+
+        {isLast ? (
+          <button className="quiz-next-btn" onClick={onStart}>
+            Start the Quiz →
+          </button>
+        ) : (
+          <button className="quiz-next-btn" onClick={() => setCardIdx(i => i + 1)}>
+            Next →
+          </button>
+        )}
+
+        <button
+          onClick={onStart}
+          style={{ display: 'block', margin: '12px auto 0', background: 'none', border: 'none', fontFamily: "'DM Sans',sans-serif", fontSize: '.78rem', color: 'var(--muted)', cursor: 'pointer', textDecoration: 'underline' }}
+        >
+          Skip to quiz
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ─── main component ──────────────────────────────────────────────────────────
 export default function VocabQuiz() {
   const { state, dispatch } = useApp();
@@ -82,14 +156,19 @@ export default function VocabQuiz() {
   const quizKey = resolveQuizKey(lang, dialect);
   const data    = quizKey ? QUIZ_DATA[quizKey] : null;
 
-  // phase: 'question' | 'score' | 'no-quiz' | 'no-lang'
-  const [phase, setPhase]         = useState('question');
+  const dialectLabel = dialect && dialect !== lang ? dialect : lang;
+
+  // Get pre-quiz facts
+  const preQuizFacts = getPreQuizFacts(dialect, lang, 3);
+
+  // phase: 'preQuiz' | 'question' | 'score' | 'no-quiz' | 'no-lang'
+  const [phase, setPhase] = useState(() => preQuizFacts.length > 0 ? 'preQuiz' : 'question');
   const [questions, setQuestions] = useState([]);
-  const [index, setIndex]         = useState(0);
-  const [score, setScore]         = useState(0);
-  const [answered, setAnswered]   = useState(false);
-  const [chosen, setChosen]       = useState(null);
-  const [showExp, setShowExp]     = useState(false);
+  const [index, setIndex] = useState(0);
+  const [score, setScore] = useState(0);
+  const [answered, setAnswered] = useState(false);
+  const [chosen, setChosen] = useState(null);
+  const [showExp, setShowExp] = useState(false);
 
   useEffect(() => {
     if (!lang) { setPhase('no-lang'); return; }
@@ -101,8 +180,13 @@ export default function VocabQuiz() {
     setAnswered(false);
     setChosen(null);
     setShowExp(false);
-    setPhase('question');
+    // Only set to question if not in preQuiz
+    setPhase(prev => prev === 'preQuiz' ? 'preQuiz' : 'question');
   }, [quizKey]);
+
+  function startQuiz() {
+    setPhase('question');
+  }
 
   function handleAnswer(i) {
     if (answered) return;
@@ -115,10 +199,8 @@ export default function VocabQuiz() {
   function handleNext() {
     const next = index + 1;
     if (next >= questions.length) {
-      const finalScore = chosen === questions[index].answer ? score : score;
-      const xp = Math.round(finalScore * 3);
+      const xp = Math.round(score * 3);
       dispatch({ type: 'AWARD_XP', payload: xp });
-      // Mark daily mission done
       localStorage.setItem('perin_mission_done_' + new Date().toDateString(), '1');
       setPhase('score');
     } else {
@@ -137,7 +219,12 @@ export default function VocabQuiz() {
     setAnswered(false);
     setChosen(null);
     setShowExp(false);
-    setPhase('question');
+    setPhase(preQuizFacts.length > 0 ? 'preQuiz' : 'question');
+  }
+
+  // ── Pre-quiz culture cards ──
+  if (phase === 'preQuiz' && preQuizFacts.length > 0) {
+    return <PreQuizCards facts={preQuizFacts} dialectLabel={dialectLabel} onStart={startQuiz} />;
   }
 
   // ── No language ──
@@ -157,7 +244,7 @@ export default function VocabQuiz() {
     <div className="screen active" id="screen-vocab-quiz" style={{ alignItems: 'center' }}>
       <div style={{ textAlign: 'center', padding: '48px 20px' }}>
         <div style={{ fontSize: '2.5rem', marginBottom: 12 }}>{activeLang?.flag || '🌍'}</div>
-        <p style={{ fontWeight: 700, fontSize: '1rem', marginBottom: 8 }}>No quiz yet for {dialect !== lang ? dialect : lang}</p>
+        <p style={{ fontWeight: 700, fontSize: '1rem', marginBottom: 8 }}>No quiz yet for {dialectLabel}</p>
         <p style={{ color: 'var(--muted)', fontSize: '.83rem', marginBottom: 24, lineHeight: 1.6 }}>
           We're adding more culture quizzes all the time.<br />Check back soon!
         </p>
