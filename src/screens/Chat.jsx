@@ -33,7 +33,7 @@ function getCultureTip(dialect, lang, scenarioTitle) {
   const namedSentence = sentences.find(s =>
     s.toLowerCase().includes(dialectName.toLowerCase())
   );
-  if (namedSentence) return namedSentence.trim();
+  if (namedSentence) return namedSentence.replace(/\*+/g, '').replace(/\s{2,}/g, ' ').trim();
 
   // 2. Prefer sentences with hard cultural rules
   const hasRule = s => /\b(never|don't|avoid|forbidden|only after|considered rude|considered insulting|marks you|signals you|not acceptable|expected to|always say|must say)\b/i.test(s);
@@ -41,7 +41,8 @@ function getCultureTip(dialect, lang, scenarioTitle) {
   if (ruleSentence) return ruleSentence.trim();
 
   // 3. Last sentence — tends to be most actionable
-  return sentences[sentences.length - 1].trim();
+  const result = sentences[sentences.length - 1].trim();
+  return result.replace(/\*+/g, '').replace(/\s{2,}/g, ' ').trim();
 }
 
 
@@ -51,11 +52,10 @@ function CultureTipBanner({ dialect, lang, scenarioTitle, onDismiss }) {
   return (
     <div style={{
       background: 'rgba(26,86,219,.05)', borderBottom: '1px solid var(--border)',
-      padding: '8px 14px', display: 'flex', alignItems: 'flex-start', gap: '8px',
-      fontSize: '.76rem', color: 'var(--muted)', lineHeight: '1.45',
+      padding: '9px 14px', display: 'flex', alignItems: 'flex-start', gap: '8px',
     }}>
-      <span style={{ flexShrink: 0, marginTop: '1px' }}>💡</span>
-      <span style={{ flex: 1 }}>{tip}</span>
+      <span style={{ flexShrink: 0, marginTop: '1px', fontSize: '.82rem' }}>💡</span>
+      <span style={{ flex: 1, fontSize: '.82rem', color: 'var(--muted)', lineHeight: '1.5', wordBreak: 'normal', overflowWrap: 'break-word', fontFamily: "'DM Sans', sans-serif" }}>{tip}</span>
       <button
         onClick={onDismiss}
         style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', fontSize: '.8rem', padding: '0 0 0 4px', flexShrink: 0 }}
