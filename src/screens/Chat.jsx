@@ -8,6 +8,48 @@ import { WORKER_URL } from '../config/constants.js';
 import { getValidToken } from '../utils/getValidToken.js';
 import { getLangCode } from '../utils/langUtils.js';
 import { LEVEL_INSTRUCTIONS } from '../data/levelInstructions.js';
+import { CULTURAL_CONTEXT } from '../data/culturalContext.js';
+
+// ─── Culture tip ─────────────────────────────────────────────────────────────
+function getCultureTip(dialect, lang, scenarioTitle) {
+  if (!scenarioTitle) return null;
+  const ctx = CULTURAL_CONTEXT?.[dialect]?.[scenarioTitle]
+    || CULTURAL_CONTEXT?.[lang]?.[scenarioTitle];
+  if (!ctx) return null;
+
+  // Split into sentences and find the most culturally specific one
+  // Skip sentences that are too generic (less than 40 chars or contain only common words)
+  const sentences = ctx.split(/(?<=[.!?])\s+/).filter(s => s.length > 40);
+  if (!sentences.length) return null;
+
+  // Prefer sentences with dialect-specific signals
+  const specific = sentences.find(s =>
+    /\b(only|never|always|unlike|specific|unique|local|tradition|custom|expect|considered|normal|rude|polite|typical|common|usually|often|instead)\b/i.test(s)
+  ) || sentences[0];
+
+  return specific.trim();
+}
+
+function CultureTipBanner({ dialect, lang, scenarioTitle, onDismiss }) {
+  const tip = getCultureTip(dialect, lang, scenarioTitle);
+  if (!tip) return null;
+  return (
+    <div style={{
+      background: 'rgba(26,86,219,.05)', borderBottom: '1px solid var(--border)',
+      padding: '8px 14px', display: 'flex', alignItems: 'flex-start', gap: '8px',
+      fontSize: '.76rem', color: 'var(--muted)', lineHeight: '1.45',
+    }}>
+      <span style={{ flexShrink: 0, marginTop: '1px' }}>💡</span>
+      <span style={{ flex: 1 }}>{tip}</span>
+      <button
+        onClick={onDismiss}
+        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', fontSize: '.8rem', padding: '0 0 0 4px', flexShrink: 0 }}
+      >
+        ✕
+      </button>
+    </div>
+  );
+}
 
 // ─── Vocab save helpers ───────────────────────────────────────────────────────
 function loadVocab() {
@@ -25,9 +67,11 @@ function saveWordToVocab(word, meaning, lang) {
 }
 
 function parseChip(chip) {
-  const sep = chip.includes('=') ? '=' : chip.includes(':') ? ':' : null;
-  if (!sep) return { word: chip.trim(), meaning: '' };
-  const [w, ...rest] = chip.split(sep);
+  // Clean chip of any markdown artifacts first
+  const clean = chip.replace(/\(\s*\)/g, '').replace(/\[\s*\]/g, '').trim();
+  const sep = clean.includes('=') ? '=' : clean.includes(':') ? ':' : clean.includes('—') ? '—' : clean.includes('-') ? '-' : null;
+  if (!sep) return { word: clean, meaning: '' };
+  const [w, ...rest] = clean.split(sep);
   return { word: w.trim(), meaning: rest.join(sep).trim() };
 }
 
@@ -318,6 +362,7 @@ export default function Chat() {
   const [saveToast, setSaveToast] = useState(null);
   const [loopingId, setLoopingId] = useState(null);
   const [translations, setTranslations] = useState({});
+  const [showCultureTip, setShowCultureTip] = useState(true);
   const loopRef = useRef(null);
 
   const [voiceGender, setVoiceGender] = useState(() =>
@@ -506,7 +551,7 @@ RULES:
       if (!fullText) { setMessages(prev => prev.filter(m => m.role !== 'typing' && m.role !== 'streaming')); return; }
 
       const scenarioComplete = fullText.includes('[SCENARIO_COMPLETE]');
-      let cleanText = fullText.replace('[SCENARIO_COMPLETE]', '').trim();
+      let cleanText = fullText.replace(/\[SCENARIO_COMPLETE\][\s\n]*/g, '').trim();
 
       let mainText = cleanText, grammarNote = '';
       if (!isInit && grammarMode) {
@@ -567,6 +612,7 @@ RULES:
     const t = (text || input).trim();
     if (!t || isSending) return;
     setInput('');
+    setShowCultureTip(false);
     historyRef.current.push({ role: 'user', content: t });
     setMessages(prev => [...prev, { role: 'user', text: t, id: Date.now() }]);
     scrollToBottom();
@@ -678,6 +724,15 @@ RULES:
             <div className="menu-divider"></div>
             <button className="menu-item menu-danger" onClick={() => { setMenuOpen(false); endSession(); }}>End session</button>
           </div>
+        )}
+
+        {showCultureTip && mode !== 'freechat' && scenario?.title && (
+          <CultureTipBanner
+            dialect={dialect}
+            lang={lang}
+            scenarioTitle={scenario.title}
+            onDismiss={() => setShowCultureTip(false)}
+          />
         )}
 
         <div id="messages" ref={messagesRef}>
