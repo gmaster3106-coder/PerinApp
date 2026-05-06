@@ -4,6 +4,7 @@ import { useApp } from '../context/AppContext.jsx';
 import { useTTS } from '../hooks/useTTS.js';
 import { WORKER_URL } from '../config/constants.js';
 import { getLangCode } from '../utils/langUtils.js';
+import { CULTURAL_CONTEXT } from '../data/culturalContext.js';
 
 const FALLBACKS = {
   Italian:    [ { target: 'Per favore', pronunciation: 'pehr fah-VOH-reh', english: 'Please' }, { target: 'Grazie', pronunciation: 'GRAH-tsyeh', english: 'Thank you' }, { target: 'Non capisco', pronunciation: 'non kah-PEE-sko', english: "I don't understand" }, { target: 'Mi scusi', pronunciation: 'mee SKOO-zee', english: 'Excuse me' } ],
@@ -104,6 +105,16 @@ GENDER RULES (important):
 - For words with both forms (like amigo/amiga, camarero/camarera), show BOTH in the "target" field separated by /: "amigo/amiga"
 - For phrases and non-nouns, omit the gender field or set it to null` : '';
 
+    // Get cultural context for this scenario to flavor the exchanges
+    const culturalCtx = CULTURAL_CONTEXT?.[dialect]?.[scenario?.title]
+      || CULTURAL_CONTEXT?.[lang]?.[scenario?.title];
+    const culturalNote = culturalCtx
+      ? `\nCULTURAL CONTEXT: ${culturalCtx.split(/[.!?]/)[0].trim()}. Use this to make the sample exchanges feel authentically ${dialect || lang} — not generic.`
+      : '';
+
+    // Dialect-specific exchange instructions
+    const dialectExchangeNote = `The sample exchanges must sound like real ${dialect || lang} speakers — use authentic expressions, natural phrasing, and any characteristic slang or discourse markers (e.g. "dale" for Dominican, "dai" for Italian, "allez" for French, "venga" for Spanish, "ñooo" for Dominican etc.) where natural.`;
+
     try {
       const apiKey = localStorage.getItem('perin_api_key') || '';
       const endpoint = accessToken ? `${WORKER_URL}/api/chat` : apiKey ? 'https://api.anthropic.com/v1/messages' : `${WORKER_URL}/api/chat`;
@@ -121,7 +132,7 @@ GENDER RULES (important):
         headers,
         body: JSON.stringify({
           model: 'claude-haiku-4-5-20251001',
-          max_tokens: 500,
+          max_tokens: 600,
           messages: [{
             role: 'user',
             content: `Give 4-5 essential words or phrases for a ${level} ${dialect} ${lang} learner about to practice: "${scenario.title}".
@@ -129,10 +140,11 @@ GENDER RULES (important):
 Level guidance: ${levelGuide}
 ${replayNote}
 ${genderInstruction}
+${culturalNote}
 
 CRITICAL: The "target" field MUST be in ${lang}. The "english" field is the ${nativeLang} translation.
 
-Also give 2 short realistic sample exchanges. Both lines in ${lang}.
+Also give 2 short realistic sample exchanges that feel authentically ${dialect || lang}. Both lines in ${lang}. ${dialectExchangeNote}
 
 Return ONLY raw JSON:
 {"words":[{"target":"[word in ${lang}]","pronunciation":"[phonetic]","english":"[${nativeLang} meaning]","gender":"m|f|mf|null"}],"exchanges":[{"speaker":"LOCAL","line":"[line in ${lang}]","translation":"[${nativeLang}]"},{"speaker":"YOU","line":"[line in ${lang}]","translation":"[${nativeLang}]"}]}`,
@@ -210,7 +222,6 @@ Return ONLY raw JSON:
                     </div>
                     <div className="wpc-pronunciation">{w.pronunciation}</div>
                     <div className="wpc-english">{w.english}</div>
-                    {/* Show both forms note if m/f */}
                     {hasGender && w.gender === 'mf' && w.target.includes('/') && (
                       <div style={{ fontSize: '.62rem', color: 'var(--muted)', marginTop: '3px', fontStyle: 'italic' }}>
                         both forms shown

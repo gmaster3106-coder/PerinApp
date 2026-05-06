@@ -6,19 +6,27 @@ import { getPreQuizFacts } from '../data/cultureFacts.js';
 
 // ─── dialect → quiz key resolver ────────────────────────────────────────────
 const DIALECT_MAP = {
+  // Spanish dialects
   'dominican republic': 'Dominican Republic', 'dominican': 'Dominican Republic',
   'puerto rico': 'Puerto Rico', 'puerto rican': 'Puerto Rico',
   'mexican': 'Mexico', 'mexico': 'Mexico',
   'colombian': 'Colombia', 'colombia': 'Colombia',
   'castilian': 'Castilian', 'madrileño': 'Castilian', 'spain': 'Castilian', 'madrid': 'Castilian',
-  'parisian': 'Parisian', 'paris': 'Parisian', 'france': 'Parisian',
+  'spanish': 'Castilian',
+  // French dialects
+  'parisian': 'Parisian', 'paris': 'Parisian',
   'southern french': 'Southern French', 'marseille': 'Southern French',
+  'french': 'French', 'france': 'French',
+  // Italian dialects
   'neapolitan': 'Neapolitan', 'naples': 'Neapolitan',
   'sicilian': 'Sicilian', 'sicily': 'Sicilian',
-  'italian': 'Italy', 'italy': 'Italy',
+  'italian': 'Italian', 'italy': 'Italian',
+  // Portuguese dialects
   'european portuguese': 'European Portuguese', 'portugal': 'European Portuguese',
-  'brazilian': 'Brazil', 'brazil': 'Brazil',
-  'haitian creole': 'Haiti', 'haiti': 'Haiti', 'creole': 'Haiti',
+  'portuguese': 'European Portuguese',
+  'brazilian': 'Brazilian', 'brazil': 'Brazilian',
+  // Creole/English
+  'haitian creole': 'Haitian Creole', 'haiti': 'Haitian Creole', 'creole': 'Haitian Creole',
   'american english': 'American English', 'english': 'American English',
 };
 
