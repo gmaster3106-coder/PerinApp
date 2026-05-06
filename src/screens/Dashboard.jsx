@@ -313,6 +313,32 @@ function DailyMission({ sessions, navigate, nextJourney }) {
   );
 }
 
+function getScenarioRevisitSuggestion(lang, dialect) {
+  try {
+    const completed = JSON.parse(localStorage.getItem('perin_completed') || '{}');
+    const playCounts = JSON.parse(localStorage.getItem(`perin_play_counts_${lang}_${dialect}`) || '{}');
+    // Find scenarios done 7+ days ago with only 1 play
+    const oneWeekAgo = Date.now() - 7 * 86400000;
+    const candidates = Object.entries(completed)
+      .filter(([key, val]) => {
+        if (!val) return false;
+        const [l, d] = key.split('_');
+        return l === lang && d === dialect;
+      })
+      .filter(([key]) => {
+        const scenarioTitle = playCounts[key];
+        // Only suggest if played <=2 times
+        return !scenarioTitle || scenarioTitle <= 2;
+      });
+    if (!candidates.length) return null;
+    // Pick one at random seeded by day
+    const seed = new Date().toDateString();
+    let hash = 0;
+    for (const ch of seed) hash = (hash * 31 + ch.charCodeAt(0)) & 0xffffffff;
+    return candidates[Math.abs(hash) % candidates.length][0];
+  } catch { return null; }
+}
+
 function CultureCard({ dialect, lang }) {
   const [expanded, setExpanded] = React.useState(false);
   const fact = getDailyFact(dialect, lang);
@@ -483,7 +509,50 @@ export default function Dashboard() {
           {lang && <DailyRing goal={activeLang?.dailyGoal || 30} />}
         </div>
 
-        {unlockedBanner && (
+        {/* Streak at-risk warning */}
+        {lang && (() => {
+          const streak = profile?.streak || 0;
+          const lastDate = profile?.lastDate || '';
+          const today = new Date().toDateString();
+          const hour = new Date().getHours();
+          const practisedToday = lastDate === today;
+          const streakAtRisk = streak >= 3 && !practisedToday && hour >= 20;
+          if (!streakAtRisk) return null;
+          return (
+            <div style={{ background: 'linear-gradient(135deg,#fef3c7,#fde68a)', border: '1.5px solid #f59e0b', borderRadius: '14px', padding: '12px 16px', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <span style={{ fontSize: '1.5rem' }}>🔥</span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: '.78rem', fontWeight: '700', color: '#92400e' }}>Streak at risk!</div>
+                <div style={{ fontSize: '.72rem', color: '#78350f' }}>Practice today to keep your {streak}-day streak alive.</div>
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* Level-up nudge after many sessions at same level */}
+        {lang && (() => {
+          const sessions = profile?.sessions || 0;
+          const level = activeLang?.level || 'beginner';
+          const shownKey = `perin_levelup_shown_${lang}_${dialect}_${level}`;
+          const alreadyShown = localStorage.getItem(shownKey);
+          const thresholds = { beginner: 8, intermediate: 15, advanced: 25 };
+          const threshold = thresholds[level];
+          if (!threshold || sessions < threshold || alreadyShown || level === 'native') return null;
+          return (
+            <div style={{ background: 'linear-gradient(135deg,rgba(26,86,219,.08),rgba(26,86,219,.03))', border: '1.5px solid rgba(26,86,219,.2)', borderRadius: '14px', padding: '12px 16px', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <span style={{ fontSize: '1.5rem' }}>🎯</span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: '.78rem', fontWeight: '700', color: 'var(--accent)' }}>Ready to level up?</div>
+                <div style={{ fontSize: '.72rem', color: 'var(--muted)' }}>You've done {sessions} sessions at {level}. Try {level === 'beginner' ? 'intermediate' : level === 'intermediate' ? 'advanced' : 'native'} level.</div>
+              </div>
+              <button onClick={() => { localStorage.setItem(shownKey, '1'); navigate('/journey'); }} style={{ background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: '8px', padding: '6px 12px', fontFamily: "'DM Sans',sans-serif", fontSize: '.72rem', fontWeight: '700', cursor: 'pointer', flexShrink: 0 }}>
+                Try it →
+              </button>
+            </div>
+          );
+        })()}
+
+                {unlockedBanner && (
           <div style={{
             background: 'linear-gradient(135deg,#fef3c7,#fde68a)', border: '1.5px solid #f59e0b',
             borderRadius: '14px', padding: '12px 16px', marginBottom: '10px',

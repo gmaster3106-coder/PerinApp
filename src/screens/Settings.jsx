@@ -170,14 +170,14 @@ export default function Settings() {
         <div className="settings-section">
           <div className="settings-section-label">Learning</div>
           <div className="settings-card">
-            <div className="settings-row clickable">
+            <div className="settings-row clickable" onClick={() => navigate('/session-history')}>
               <div className="settings-row-left">
                 <div className="settings-row-icon">📊</div>
-                <div className="settings-row-text"><strong>Progress Charts</strong><span>XP, levels, and session history</span></div>
+                <div className="settings-row-text"><strong>Progress &amp; History</strong><span>Sessions, XP, and completed scenarios</span></div>
               </div>
               <div className="settings-row-right"><span className="settings-chevron">›</span></div>
             </div>
-            <div className="settings-row clickable" onClick={() => navigate('/srs')}>
+            <div className="settings-row clickable" onClick={() => navigate('/session-history')}>
               <div className="settings-row-left">
                 <div className="settings-row-icon">📋</div>
                 <div className="settings-row-text">

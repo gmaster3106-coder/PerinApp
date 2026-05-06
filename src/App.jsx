@@ -28,6 +28,7 @@ import Scenes from './screens/Scenes.jsx';
 import Friends from './screens/Friends.jsx';
 import Connections from './screens/Connections.jsx';
 import SessionSummary from './screens/SessionSummary.jsx';
+import SessionHistory from './screens/SessionHistory.jsx';
 import Paywall from './screens/Paywall.jsx';
 
 const HIDE_HEADER_PATHS = new Set([
@@ -84,6 +85,7 @@ export default function App() {
           <Route path="/summary" element={<SessionSummary />} />
           <Route path="/paywall" element={<Paywall />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/session-history" element={<SessionHistory />} />
           <Route path="/wordprep" element={<WordPrep />} />
           <Route path="/srs" element={<SrsReview />} />
           <Route path="/fib" element={<FillBlank />} />

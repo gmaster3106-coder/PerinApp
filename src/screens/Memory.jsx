@@ -15,50 +15,65 @@ export default function Memory() {
   const dialect    = activeLang?.dialect || lang;
   const isLoggedIn = !!state.currentUser?.access_token;
 
-  const [phase, setPhase]     = useState('loading'); // loading | empty | data | error | noauth | nolang
+  const [phase, setPhase]     = useState('loading');
   const [moments, setMoments] = useState([]);
+  const [source, setSource]   = useState('api'); // 'api' | 'local'
 
   useEffect(() => {
-    if (!isLoggedIn) { setPhase('noauth'); return; }
-    if (!lang)       { setPhase('nolang'); return; }
+    if (!lang) { setPhase('nolang'); return; }
     load();
   }, [lang, dialect, isLoggedIn]);
 
   async function load() {
     setPhase('loading');
+
+    // Try API first if logged in
+    if (isLoggedIn) {
+      try {
+        const token = await getValidToken();
+        const res = await fetch(
+          `${WORKER_URL}/api/memory?lang=${encodeURIComponent(lang)}&dialect=${encodeURIComponent(dialect)}&limit=100`,
+          { headers: token ? { Authorization: `Bearer ${token}` } : {} }
+        );
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data) && data.length) {
+            setMoments(data);
+            setSource('api');
+            setPhase('data');
+            return;
+          }
+        }
+      } catch { /* fall through to local */ }
+    }
+
+    // Fallback: use local vocab
     try {
-      const token = await getValidToken();
-      const res = await fetch(
-        `${WORKER_URL}/api/memory?lang=${encodeURIComponent(lang)}&dialect=${encodeURIComponent(dialect)}&limit=100`,
-        { headers: token ? { Authorization: `Bearer ${token}` } : {} }
-      );
-      if (!res.ok) throw new Error(`${res.status}`);
-      const data = await res.json();
-      setMoments(Array.isArray(data) ? data : []);
-      setPhase(Array.isArray(data) && data.length ? 'data' : 'empty');
+      const vocab = JSON.parse(localStorage.getItem('perin_vocab') || '[]');
+      const langVocab = vocab.filter(v => !v.lang || v.lang === lang);
+      if (langVocab.length) {
+        // Convert vocab format to moments format
+        const converted = langVocab.map(v => ({
+          phrase: v.word,
+          translation: v.meaning,
+          sr_reps: v.reviews || 0,
+          times_used: v.reviews || 0,
+          times_seen: Math.max(v.reviews || 0, 1),
+          source_scenario: null,
+          context: null,
+          user_produced: false,
+        }));
+        setMoments(converted);
+        setSource('local');
+        setPhase('data');
+      } else {
+        setPhase('empty');
+      }
     } catch {
-      setPhase('error');
+      setPhase('empty');
     }
   }
 
-  // ── No auth ──
-  if (phase === 'noauth') return (
-    <div className="screen active" style={{ alignItems: 'center', padding: '28px 16px 60px' }}>
-      <div style={{ width: '100%', maxWidth: '560px' }}>
-        <Header />
-        <div style={{ textAlign: 'center', padding: '48px 20px' }}>
-          <div style={{ fontSize: '2.5rem', marginBottom: 12 }}>🔑</div>
-          <p style={{ fontWeight: 700, fontSize: '1rem', marginBottom: 8 }}>Sign in to see your moments</p>
-          <p style={{ color: 'var(--muted)', fontSize: '.84rem', marginBottom: 24, lineHeight: 1.6 }}>
-            Your moments are saved to your account. Sign in to access them.
-          </p>
-          <button className="fib-next-btn" onClick={() => navigate('/settings')}>Go to Settings →</button>
-        </div>
-      </div>
-    </div>
-  );
-
-  // ── No language ──
   if (phase === 'nolang') return (
     <div className="screen active" style={{ alignItems: 'center', padding: '28px 16px 60px' }}>
       <div style={{ width: '100%', maxWidth: '560px' }}>
@@ -75,39 +90,20 @@ export default function Memory() {
     </div>
   );
 
-  // ── Loading ──
   if (phase === 'loading') return (
     <div className="screen active" style={{ alignItems: 'center', padding: '28px 16px 60px' }}>
       <div style={{ width: '100%', maxWidth: '560px' }}>
         <Header />
-        <div className="fib-loading" style={{ padding: '48px 0', textAlign: 'center' }}>
+        <div style={{ padding: '48px 0', textAlign: 'center' }}>
           <p style={{ marginBottom: 18, fontSize: '.9rem', color: 'var(--muted)' }}>Loading your moments…</p>
-          <div>
-            <span className="fib-loading-dot" />
-            <span className="fib-loading-dot" />
-            <span className="fib-loading-dot" />
-          </div>
+          <span className="fib-loading-dot" />
+          <span className="fib-loading-dot" />
+          <span className="fib-loading-dot" />
         </div>
       </div>
     </div>
   );
 
-  // ── Error ──
-  if (phase === 'error') return (
-    <div className="screen active" style={{ alignItems: 'center', padding: '28px 16px 60px' }}>
-      <div style={{ width: '100%', maxWidth: '560px' }}>
-        <Header />
-        <div style={{ textAlign: 'center', padding: '48px 20px' }}>
-          <div style={{ fontSize: '2rem', marginBottom: 12 }}>⚠️</div>
-          <p style={{ fontWeight: 700, marginBottom: 8 }}>Could not load moments</p>
-          <p style={{ color: 'var(--muted)', fontSize: '.84rem', marginBottom: 24 }}>Check your connection and try again.</p>
-          <button className="fib-next-btn" onClick={load}>Try Again</button>
-        </div>
-      </div>
-    </div>
-  );
-
-  // ── Empty ──
   if (phase === 'empty') return (
     <div className="screen active" style={{ alignItems: 'center', padding: '28px 16px 60px' }}>
       <div style={{ width: '100%', maxWidth: '560px' }}>
@@ -116,7 +112,7 @@ export default function Memory() {
           <div style={{ fontSize: '2.5rem', marginBottom: 12 }}>💭</div>
           <p style={{ fontWeight: 700, fontSize: '1rem', marginBottom: 8 }}>No moments yet</p>
           <p style={{ color: 'var(--muted)', fontSize: '.84rem', lineHeight: 1.6, marginBottom: 24 }}>
-            Start a conversation — the engine captures phrases as you practice.
+            Save words during conversations — tap 💾 on any retention chip to build your collection.
           </p>
           <button className="fib-next-btn" onClick={() => navigate('/scenarios')}>Start a Conversation</button>
         </div>
@@ -124,7 +120,6 @@ export default function Memory() {
     </div>
   );
 
-  // ── Data ──
   const mastered   = moments.filter(m => (m.sr_reps || 0) >= 3);
   const inProgress = moments.filter(m => (m.sr_reps || 0) > 0 && (m.sr_reps || 0) < 3);
   const newOnes    = moments.filter(m => (m.sr_reps || 0) === 0);
@@ -134,7 +129,12 @@ export default function Memory() {
       <div style={{ width: '100%', maxWidth: '560px' }}>
         <Header />
 
-        {/* Stats row */}
+        {source === 'local' && (
+          <div style={{ background: 'var(--cream)', borderRadius: 10, padding: '8px 14px', marginBottom: 16, fontSize: '.75rem', color: 'var(--muted)' }}>
+            💡 Showing your saved vocabulary. Sign in to sync moments across devices.
+          </div>
+        )}
+
         <div style={{ display: 'flex', gap: 10, marginBottom: 24 }}>
           {[
             { label: 'Total', val: moments.length, color: 'var(--accent)' },
@@ -148,9 +148,9 @@ export default function Memory() {
           ))}
         </div>
 
-        <MomentGroup title="Phrases you've mastered" emoji="⭐" items={mastered} />
+        <MomentGroup title="Words you've mastered" emoji="⭐" items={mastered} />
         <MomentGroup title="In progress" emoji="🔄" items={inProgress} />
-        <MomentGroup title="Recently heard" emoji="👂" items={newOnes} />
+        <MomentGroup title="Recently saved" emoji="👂" items={newOnes} />
 
         <div style={{ textAlign: 'center', marginTop: 8 }}>
           <button
@@ -172,7 +172,7 @@ function Header() {
         💭 My Moments
       </h2>
       <p style={{ color: 'var(--muted)', fontSize: '.85rem', lineHeight: 1.5 }}>
-        Words you struggled with, brought back in context — your personal spaced repetition.
+        Words you've saved, brought back in context — your personal collection.
       </p>
     </div>
   );
@@ -203,9 +203,7 @@ function MomentGroup({ title, emoji, items }) {
               <div style={{ fontSize: '.73rem', color: 'var(--muted)', opacity: .7, fontStyle: 'italic', lineHeight: 1.4 }}>{m.context}</div>
             )}
             <div style={{ display: 'flex', gap: 8, marginTop: 6, fontSize: '.65rem', color: 'var(--muted)' }}>
-              <span>Used {m.times_used || 0}×</span>
-              <span>·</span>
-              <span>Seen {m.times_seen || 1}×</span>
+              <span>Reviewed {m.times_used || 0}×</span>
               {m.user_produced && <span>· <span style={{ color: '#22c55e' }}>You said this</span></span>}
             </div>
           </div>
