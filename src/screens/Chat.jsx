@@ -209,7 +209,10 @@ function parseOpeningMessage(text) {
   }
   // Strip retention chip lines from phraseMeaning
   const rawMeaning = phraseMatch ? phraseMatch[2].trim() : '';
-  const cleanMeaning = rawMeaning.split('\n').find(l => !/[\u{1F511}\u{1FAB6}]/u.test(l))?.trim() || rawMeaning;
+  const cleanMeaning = rawMeaning
+    .split('\n')
+    .map(l => l.replace(/\u{1F511}.*/u, '').replace(/\u{1FAB6}.*/u, '').trim())
+    .find(l => l.length > 0) || rawMeaning;
   return {
     welcome: stripMd(welcomeText),
     goal: goalMatch ? goalMatch[1].trim() : '',
