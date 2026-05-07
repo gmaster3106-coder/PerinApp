@@ -10,7 +10,7 @@ export default function DialectDecoder() {
       >
         ← Back
       </button>
-      <h2>Dialect Decoder</h2>
+      <h2>Native Ear</h2>
       <p style={{ color: 'var(--muted)' }}>Coming soon...</p>
     </div>
   );
