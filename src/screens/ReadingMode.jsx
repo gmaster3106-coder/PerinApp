@@ -235,7 +235,7 @@ Return ONLY raw JSON:
               <span>{showVocab ? '▲' : '▼'}</span>
             </button>
             {showVocab && (
-              <div style={{ borderTop: 'none', border: '1.5px solid var(--border)', borderTop: 0, borderRadius: '0 0 10px 10px', padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div style={{ border: '1.5px solid var(--border)', borderTop: 0, borderRadius: '0 0 10px 10px', padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {vocab.map((v, i) => (
                   <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
                     <span style={{ fontSize: '.88rem', fontWeight: 700, color: 'var(--accent)' }}>{v.word}</span>
