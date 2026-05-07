@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext.jsx';
 import { useAuth } from '../hooks/useAuth.js';
-import { ACCENT_THEMES, SUPABASE_URL, SUPABASE_ANON_KEY } from '../config/constants.js';
+import { ACCENT_THEMES, SUPABASE_URL, SUPABASE_ANON_KEY, WORKER_URL } from '../config/constants.js';
 import { getAvatarColor, getAvatarInitials } from '../utils/avatarUtils.js';
 
 const PERIN_LS_KEYS = [
@@ -76,22 +76,9 @@ export default function Settings() {
       const userId = state.currentUser?.id;
 
       if (token && userId) {
-        // Delete profile data from Supabase
-        await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${userId}`, {
-          method: 'DELETE',
-          headers: {
-            'apikey': SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${token}`,
-          },
-        }).catch(() => {});
-
-        // Delete the auth user
-        await fetch(`${SUPABASE_URL}/auth/v1/user`, {
-          method: 'DELETE',
-          headers: {
-            'apikey': SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${token}`,
-          },
+        await fetch(`${WORKER_URL}/api/delete-account`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` },
         }).catch(() => {});
       }
 
