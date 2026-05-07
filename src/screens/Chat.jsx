@@ -20,10 +20,10 @@ function getCultureTip(dialect, lang, scenarioTitle) {
   const normalized = ctx
     .replace(/ -- /g, '. ')
     .replace(/ — /g, '. ')
-    .replace(/s+/g, ' ')
+    .replace(/\s+/g, ' ')
     .trim();
 
-  const sentences = normalized.split(/(?<=[.!?])s+/).filter(s => s.trim().length > 30);
+  const sentences = normalized.split(/(?<=[.!?])\s+/).filter(s => s.trim().length > 30);
   if (!sentences.length) return null;
 
   const dialectName = (dialect || lang).split(' ')[0];
@@ -205,11 +205,14 @@ function parseOpeningMessage(text) {
     const afterLine = text.slice(phraseIdx).split('\n').slice(1).join('\n').trim();
     afterPhrase = afterLine;
   }
+  // Strip retention chip lines from phraseMeaning
+  const rawMeaning = phraseMatch ? phraseMatch[2].trim() : '';
+  const cleanMeaning = rawMeaning.split('\n').find(l => !/[\u{1F511}\u{1FAB6}]/u.test(l))?.trim() || rawMeaning;
   return {
     welcome: stripMd(welcomeText),
     goal: goalMatch ? goalMatch[1].trim() : '',
     phraseTarget: phraseMatch ? phraseMatch[1].trim() : '',
-    phraseMeaning: phraseMatch ? phraseMatch[2].trim() : '',
+    phraseMeaning: cleanMeaning,
     after: stripMd(afterPhrase),
   };
 }
