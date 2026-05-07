@@ -96,9 +96,11 @@ export default function Settings() {
       }
 
       clearAllPerinData();
+      logout();
       navigate('/welcome', { replace: true });
     } catch {
       clearAllPerinData();
+      logout();
       navigate('/welcome', { replace: true });
     }
   }
