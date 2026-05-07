@@ -65,6 +65,14 @@ export default function Onboarding() {
     navigate('/dashboard');
   }
 
+  function handleBack() {
+    if (step === 0) {
+      navigate(-1);
+    } else {
+      setStep(s => s - 1);
+    }
+  }
+
   const dialects = OB_DIALECTS[lang] || [];
   const s = STEPS[step];
   const canContinue = step === 0 ? !!native : step === 1 ? !!lang : step === 2 ? !!dialect : true;
@@ -72,6 +80,21 @@ export default function Onboarding() {
   return (
     <div className="screen active center-screen" id="screen-onboarding">
       <div className="onboard-new">
+
+        {/* Back button */}
+        <button
+          onClick={handleBack}
+          style={{
+            alignSelf: 'flex-start',
+            background: 'none', border: 'none',
+            fontSize: '1rem', color: 'var(--muted)',
+            cursor: 'pointer', padding: '0 0 8px 0',
+            fontFamily: "'DM Sans',sans-serif",
+          }}
+        >
+          ← Back
+        </button>
+
         <div className="onboard-step-label">{s.label}</div>
         <div className="onboard-question">{s.question}</div>
         <div className="onboard-sub">{s.sub}</div>
