@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useApp } from '../context/AppContext.jsx';
 import { getValidToken } from '../utils/getValidToken.js';
+import { useStreak } from '../hooks/useStreak.js';
 
 const WORKER_URL = 'https://perin-proxy.gmaster3106.workers.dev';
 
@@ -35,6 +36,7 @@ export default function SessionSummary() {
   const { state, dispatch } = useApp();
   const navigate = useNavigate();
   const location = useLocation();
+  const { recordActivity } = useStreak();
 
   const {
     xpEarned    = 0,
@@ -60,7 +62,7 @@ export default function SessionSummary() {
   const [recapPhrases, setRecapPhrases] = useState(null);
   const [savedWords, setSavedWords] = useState({});
 
-  // Award XP, check streak, mark mission done, mark scenario complete — only once per session
+  // Award XP, record streak activity, mark mission done, mark scenario complete — only once per session
   useEffect(() => {
     const summaryKey = `perin_summary_${xpEarned}_${messages}`;
     const alreadyAwarded = sessionStorage.getItem(summaryKey);
@@ -68,6 +70,9 @@ export default function SessionSummary() {
       sessionStorage.setItem(summaryKey, '1');
       if (xpEarned > 0) dispatch({ type: 'AWARD_XP', payload: xpEarned });
       dispatch({ type: 'CHECK_STREAK' });
+
+      // Record activity for streak tracking
+      recordActivity();
 
       // Only mark mission done if today's mission is a chat-type
       markMissionDoneIfChat();
