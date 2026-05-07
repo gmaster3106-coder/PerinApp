@@ -1,0 +1,14 @@
+# cloudflare-worker/wrangler.toml
+# Perin API proxy — Cloudflare Worker config
+#
+# Deploy: npx wrangler deploy
+#
+# Secrets already set in Cloudflare dashboard — no need to reset them.
+
+name = "perin-proxy"
+main = "worker.js"
+compatibility_date = "2024-01-01"
+
+[[kv_namespaces]]
+binding = "RATE_LIMIT"
+id = "39dcd909b00941b299e29576ac479ef8"
