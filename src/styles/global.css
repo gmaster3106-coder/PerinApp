@@ -129,7 +129,9 @@ header{background:var(--header-bg);color:#fff;padding:10px 20px;display:flex;ali
 .journey-node.done{background:var(--accent);border-color:var(--accent);box-shadow:0 4px 16px rgba(26,86,219,.3);}
 .journey-node.done .journey-node-icon{filter:brightness(10);}
 .journey-node.current{border-color:var(--accent);border-width:3px;background:var(--card);animation:journeyPulse 2.2s ease-in-out infinite;}
-.journey-node.locked{opacity:.38;cursor:not-allowed;box-shadow:none;}
+.journey-node.locked{opacity:1;cursor:not-allowed;box-shadow:none;background:var(--cream);border-color:var(--border);border-style:dashed;}
+body.dark .journey-node.locked{background:rgba(255,255,255,.04);}
+.journey-node.locked .journey-node-icon{opacity:.35;}
 .journey-node.native-node:not(.done):not(.locked){border-color:#7c3aed;}
 .journey-node.native-node.current{border-color:#7c3aed;animation:journeyPulseNative 2.2s ease-in-out infinite;}
 .journey-node.advanced-node:not(.done):not(.locked){border-color:#fca5a5;}
@@ -513,6 +515,7 @@ body.dark .bub-btn{border-color:rgba(255,255,255,.1);background:rgba(255,255,255
 .scenario-locked{opacity:.45;cursor:default !important;}
 .scenario-check-badge{margin-left:auto;flex-shrink:0;background:#d1fae5;color:#065f46;font-size:.65rem;font-weight:700;padding:3px 8px;border-radius:10px;}
 @keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
+@keyframes spin{to{transform:rotate(360deg);}}
 @keyframes confettiFall{0%{transform:translateY(0) rotate(0deg);opacity:1;}100%{transform:translateY(100vh) rotate(720deg);opacity:0;}}
 
 /* XP POP */
@@ -948,3 +951,8 @@ body:not(.dark){--im-bg:#f0f4ff;--im-bg2:#e4eaff;--im-card:#fff;--im-border:rgba
   .journey-node{width:54px;height:54px;}
   .journey-node-info{width:100px;max-width:100px;}
 }
+
+/* ── JOURNEY CELEBRATION ── */
+.journey-celebration-overlay{position:fixed;inset:0;background:rgba(10,26,58,.75);z-index:200;display:flex;align-items:center;justify-content:center;padding:24px;backdrop-filter:blur(4px);animation:fadeIn .3s ease;overflow:hidden;}
+.journey-celebration-card{background:var(--card);border-radius:24px;padding:36px 28px 28px;max-width:380px;width:100%;text-align:center;box-shadow:0 24px 80px rgba(10,26,58,.3);position:relative;animation:celebrationPop .4s cubic-bezier(.22,1,.36,1);overflow:hidden;}
+@keyframes celebrationPop{from{opacity:0;transform:scale(.85) translateY(20px);}to{opacity:1;transform:scale(1) translateY(0);}}
