@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext.jsx';
+import { showAuthModal } from '../components/AuthModal.jsx';
 import { OB_DIALECTS } from '../data/languages.js';
 
 const NATIVE_LANGS = [
@@ -31,7 +32,7 @@ const STEPS = [
   { label: 'Step 1 of 4', question: "What's your native language?", sub: 'So we know how to explain things to you' },
   { label: 'Step 2 of 4', question: 'What do you want to learn?', sub: 'Pick the language you want to speak' },
   { label: 'Step 3 of 4', question: 'Pick your dialect', sub: 'Each dialect has its own voice, slang, and culture' },
-  { label: 'Step 3 of 4', question: 'Save your progress', sub: 'Create a free account to keep your streak and vocab' },
+  { label: '', question: 'Save your progress', sub: 'Create a free account to keep your streak and vocab' },
   { label: 'Step 4 of 4', question: "What's your daily goal?", sub: 'You can change this anytime' },
 ];
 
@@ -80,7 +81,7 @@ export default function Onboarding() {
   }
 
   function handleShowAuth() {
-    dispatch({ type: 'SHOW_AUTH_MODAL' });
+    showAuthModal();
   }
 
   const dialects = OB_DIALECTS[lang] || [];
@@ -104,8 +105,8 @@ export default function Onboarding() {
           ← Back
         </button>
 
-        <div className="onboard-step-label">{s.label}</div>
-        <div className="onboard-question">{s.question}</div>
+        {s.label && <div className="onboard-step-label">{s.label}</div>}
+        <div className="onboard-question" style={{ color: step === 3 ? 'var(--ink)' : undefined }}>{s.question}</div>
         <div className="onboard-sub">{s.sub}</div>
 
         {step === 0 && (
