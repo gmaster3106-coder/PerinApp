@@ -96,10 +96,18 @@ export default function Settings() {
       }
 
       clearAllPerinData();
+      dispatch({ type: 'SET_PROFILE', payload: null });
+      dispatch({ type: 'SET_LANGUAGES', payload: [] });
+      dispatch({ type: 'SET_ACTIVE_LANG', payload: {} });
+      dispatch({ type: 'RESET_PROGRESS' });
       logout();
       navigate('/welcome', { replace: true });
     } catch {
       clearAllPerinData();
+      dispatch({ type: 'SET_PROFILE', payload: null });
+      dispatch({ type: 'SET_LANGUAGES', payload: [] });
+      dispatch({ type: 'SET_ACTIVE_LANG', payload: {} });
+      dispatch({ type: 'RESET_PROGRESS' });
       logout();
       navigate('/welcome', { replace: true });
     }
