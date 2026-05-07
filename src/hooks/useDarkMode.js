@@ -1,15 +1,6 @@
 // src/hooks/useDarkMode.js
 // Detects and tracks system dark mode preference.
-// Respects user override if they've manually set a preference in the app.
-//
-// Usage:
-//   const { isDark, toggle, reset } = useDarkMode()
-//
-// The hook:
-//   1. Reads system preference via prefers-color-scheme
-//   2. Allows user override stored in localStorage
-//   3. Applies 'dark' class to document.documentElement
-//   4. Listens for system preference changes in real time
+// Applies 'dark' class to document.body (matching existing CSS selectors).
 
 import { useState, useEffect, useCallback } from 'react'
 
@@ -22,7 +13,7 @@ function getSystemPreference() {
 function getSavedPreference() {
   try {
     const val = localStorage.getItem(STORAGE_KEY)
-    if (val === null) return null          // no override — follow system
+    if (val === null) return null
     return val === 'true'
   } catch {
     return null
@@ -31,9 +22,9 @@ function getSavedPreference() {
 
 function applyDarkMode(isDark) {
   if (isDark) {
-    document.documentElement.classList.add('dark')
+    document.body.classList.add('dark')
   } else {
-    document.documentElement.classList.remove('dark')
+    document.body.classList.remove('dark')
   }
 }
 
@@ -49,28 +40,22 @@ export function useDarkMode() {
     return getSavedPreference() !== null
   })
 
-  // Listen for system preference changes (only applies when not overridden)
   useEffect(() => {
     const mq = window.matchMedia('(prefers-color-scheme: dark)')
-
     const handler = (e) => {
       if (getSavedPreference() === null) {
-        // No user override — follow system
         applyDarkMode(e.matches)
         setIsDark(e.matches)
       }
     }
-
     mq.addEventListener('change', handler)
     return () => mq.removeEventListener('change', handler)
   }, [])
 
-  // Apply whenever isDark changes
   useEffect(() => {
     applyDarkMode(isDark)
   }, [isDark])
 
-  // Toggle and save user override
   const toggle = useCallback(() => {
     setIsDark(prev => {
       const next = !prev
@@ -80,7 +65,6 @@ export function useDarkMode() {
     })
   }, [])
 
-  // Reset to system preference (remove user override)
   const reset = useCallback(() => {
     try { localStorage.removeItem(STORAGE_KEY) } catch {}
     setIsOverridden(false)
