@@ -17,7 +17,6 @@ function getCultureTip(dialect, lang, scenarioTitle) {
     || CULTURAL_CONTEXT?.[lang]?.[scenarioTitle];
   if (!ctx) return null;
 
-  // Normalize separators so we can split reliably
   const normalized = ctx
     .replace(/ -- /g, '. ')
     .replace(/ — /g, '. ')
@@ -29,22 +28,18 @@ function getCultureTip(dialect, lang, scenarioTitle) {
 
   const dialectName = (dialect || lang).split(' ')[0];
 
-  // 1. Prefer sentences that name the dialect — most specific
   const namedSentence = sentences.find(s =>
     s.toLowerCase().includes(dialectName.toLowerCase())
   );
   if (namedSentence) return namedSentence.replace(/\*+/g, '').replace(/\s{2,}/g, ' ').trim();
 
-  // 2. Prefer sentences with hard cultural rules
   const hasRule = s => /\b(never|don't|avoid|forbidden|only after|considered rude|considered insulting|marks you|signals you|not acceptable|expected to|always say|must say)\b/i.test(s);
   const ruleSentence = sentences.find(hasRule);
   if (ruleSentence) return ruleSentence.trim();
 
-  // 3. Last sentence — tends to be most actionable
   const result = sentences[sentences.length - 1].trim();
   return result.replace(/\*+/g, '').replace(/\s{2,}/g, ' ').trim();
 }
-
 
 function CultureTipBanner({ dialect, lang, scenarioTitle, onDismiss }) {
   const tip = getCultureTip(dialect, lang, scenarioTitle);
@@ -82,12 +77,27 @@ function saveWordToVocab(word, meaning, lang) {
 }
 
 function parseChip(chip) {
-  // Clean chip of any markdown artifacts first
   const clean = chip.replace(/\(\s*\)/g, '').replace(/\[\s*\]/g, '').trim();
   const sep = clean.includes('=') ? '=' : clean.includes(':') ? ':' : clean.includes('—') ? '—' : clean.includes('-') ? '-' : null;
   if (!sep) return { word: clean, meaning: '' };
   const [w, ...rest] = clean.split(sep);
   return { word: w.trim(), meaning: rest.join(sep).trim() };
+}
+
+// ─── Spinner component ────────────────────────────────────────────────────────
+function Spinner() {
+  return (
+    <span style={{
+      display: 'inline-block',
+      width: 12,
+      height: 12,
+      border: '2px solid currentColor',
+      borderTopColor: 'transparent',
+      borderRadius: '50%',
+      animation: 'spin .7s linear infinite',
+      flexShrink: 0,
+    }} />
+  );
 }
 
 // ─── Prompt builders ─────────────────────────────────────────────────────────
@@ -129,7 +139,6 @@ function buildSystemPrompt(config, vocab) {
   const motivNote = motivation ? `\n\nLEARNER: Their reason for learning ${lang}: "${motivation}".` : '';
   const contextNote = config.context ? `\n\nREADING CONTEXT: The learner just read this text: "${config.context.slice(0, 300)}". Discuss it naturally.` : '';
 
-  // Inject dialect-specific cultural context for scene mode
   let sceneCultureNote = '';
   if (mode === 'scene' && scenario?.title) {
     const sceneCtx = CULTURAL_CONTEXT?.[dialect]?.[scenario.title]
@@ -176,7 +185,6 @@ function parseRetention(text) {
     });
   }
   const shadowMatch = raw.match(/\u{1FAB6}\s*Try saying:\s*"([^"]+)"/u);
-  // Remove entire lines containing retention emojis
   const cleaned = raw
     .split('\n')
     .filter(line => !/\u{1F511}/u.test(line) && !/\u{1FAB6}/u.test(line))
@@ -256,7 +264,7 @@ function stripAsteriskActions(text) {
 }
 
 // ─── Message components ───────────────────────────────────────────────────────
-function OpeningMessage({ msg, level, lang, onPlay, onLoop, onTranslate, onSave, looping, translation }) {
+function OpeningMessage({ msg, level, lang, onPlay, onLoop, onTranslate, onSave, looping, translation, speaking }) {
   const parsed = parseOpeningMessage(msg.text);
   const [saved, setSaved] = useState(false);
 
@@ -291,9 +299,14 @@ function OpeningMessage({ msg, level, lang, onPlay, onLoop, onTranslate, onSave,
         )}
       </div>
       <div className="ai-hero-actions">
-        <button className="ai-hero-btn play-btn" onClick={() => onPlay(msg.text)}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-          Play
+        <button
+          className="ai-hero-btn play-btn"
+          onClick={() => onPlay(msg.text, msg.id)}
+          disabled={speaking}
+          style={{ display: 'flex', alignItems: 'center', gap: 5, opacity: speaking ? 0.7 : 1 }}
+        >
+          {speaking ? <Spinner /> : <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>}
+          {speaking ? 'Loading…' : 'Play'}
         </button>
         <button className={`ai-hero-btn loop-btn${looping ? ' active' : ''}`} onClick={() => onLoop(msg.text)}>
           {looping ? '⏹ Stop' : 'Loop'}
@@ -315,7 +328,7 @@ function OpeningMessage({ msg, level, lang, onPlay, onLoop, onTranslate, onSave,
   );
 }
 
-function AiMessage({ msg, level, lang, onPlay, onLoop, onTranslate, onSave, looping, translation }) {
+function AiMessage({ msg, level, lang, onPlay, onLoop, onTranslate, onSave, looping, translation, speaking }) {
   const cleanText = stripAsteriskActions(msg.text);
   const [saved, setSaved] = useState(false);
 
@@ -331,9 +344,14 @@ function AiMessage({ msg, level, lang, onPlay, onLoop, onTranslate, onSave, loop
       <div className="ai-hero-text">{cleanText}</div>
       {msg.grammarNote && <div className="grammar-note">{msg.grammarNote}</div>}
       <div className="ai-hero-actions">
-        <button className="ai-hero-btn play-btn" onClick={() => onPlay(msg.text)}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-          Play
+        <button
+          className="ai-hero-btn play-btn"
+          onClick={() => onPlay(msg.text, msg.id)}
+          disabled={speaking}
+          style={{ display: 'flex', alignItems: 'center', gap: 5, opacity: speaking ? 0.7 : 1 }}
+        >
+          {speaking ? <Spinner /> : <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>}
+          {speaking ? 'Loading…' : 'Play'}
         </button>
         <button className={`ai-hero-btn loop-btn${looping ? ' active' : ''}`} onClick={() => onLoop(msg.text)}>
           {looping ? '⏹ Stop' : 'Loop'}
@@ -389,6 +407,7 @@ export default function Chat() {
   const [loopingId, setLoopingId] = useState(null);
   const [translations, setTranslations] = useState({});
   const [showCultureTip, setShowCultureTip] = useState(true);
+  const [speakingId, setSpeakingId] = useState(null);
   const loopRef = useRef(null);
 
   const [voiceGender, setVoiceGender] = useState(() =>
@@ -417,10 +436,15 @@ export default function Chat() {
     if (messagesRef.current) messagesRef.current.scrollTop = messagesRef.current.scrollHeight;
   }
 
-  async function speakMessage(text) {
+  async function speakMessage(text, msgId) {
     if (!voiceId) return;
-    const token = await getValidToken();
-    speak({ text, voiceId, lang: getLangCode(lang, dialect), accessToken: token });
+    setSpeakingId(msgId || null);
+    try {
+      const token = await getValidToken();
+      await speak({ text, voiceId, lang: getLangCode(lang, dialect), accessToken: token });
+    } finally {
+      setSpeakingId(null);
+    }
   }
 
   function handleWordSaved(word, didSave) {
@@ -784,8 +808,8 @@ RULES:
               </div>
             );
             if (msg.role === 'ai') {
-              if (msg.isOpening) return <OpeningMessage key={msg.id} msg={msg} level={level} lang={lang} onPlay={speakMessage} onLoop={handleLoop} onTranslate={handleTranslate} onSave={handleWordSaved} looping={loopingId === msg.id} translation={translations[msg.id]} />;
-              return <AiMessage key={msg.id} msg={msg} level={level} lang={lang} onPlay={speakMessage} onLoop={handleLoop} onTranslate={handleTranslate} onSave={handleWordSaved} looping={loopingId === msg.id} translation={translations[msg.id]} />;
+              if (msg.isOpening) return <OpeningMessage key={msg.id} msg={msg} level={level} lang={lang} onPlay={(t) => speakMessage(t, msg.id)} onLoop={handleLoop} onTranslate={handleTranslate} onSave={handleWordSaved} looping={loopingId === msg.id} translation={translations[msg.id]} speaking={speakingId === msg.id} />;
+              return <AiMessage key={msg.id} msg={msg} level={level} lang={lang} onPlay={(t) => speakMessage(t, msg.id)} onLoop={handleLoop} onTranslate={handleTranslate} onSave={handleWordSaved} looping={loopingId === msg.id} translation={translations[msg.id]} speaking={speakingId === msg.id} />;
             }
             return null;
           })}
