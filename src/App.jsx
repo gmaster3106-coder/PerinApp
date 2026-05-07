@@ -36,6 +36,10 @@ const HIDE_HEADER_PATHS = new Set([
   '/chat', '/pressure', '/intro', '/welcome', '/onboarding', '/profile', '/summary', '/paywall',
 ]);
 
+const PUBLIC_PATHS = new Set([
+  '/welcome', '/intro', '/onboarding', '/profile',
+]);
+
 function AppShell() {
   const { state } = useApp();
   const location = useLocation();
@@ -44,6 +48,7 @@ function AppShell() {
   const audioUnlocked = useRef(false);
 
   const showHeader = !HIDE_HEADER_PATHS.has(location.pathname);
+  const isLoggedIn = !!state.currentUser?.access_token;
 
   useEffect(() => {
     const unlock = () => {
@@ -62,13 +67,23 @@ function AppShell() {
   useEffect(() => {
     const path = location.pathname;
     const isRoot = path === '/' || path === '/PerinApp' || path === '/PerinApp/';
-    if (!isRoot) return;
-    if (!state.profile?.name) {
-      navigate('/welcome', { replace: true });
-    } else {
-      navigate('/dashboard', { replace: true });
+
+    if (isRoot) {
+      if (!isLoggedIn) {
+        navigate('/welcome', { replace: true });
+      } else if (!state.profile?.name) {
+        navigate('/onboarding', { replace: true });
+      } else {
+        navigate('/dashboard', { replace: true });
+      }
+      return;
     }
-  }, []);
+
+    // Protect non-public routes — redirect to welcome if not logged in
+    if (!isLoggedIn && !PUBLIC_PATHS.has(path)) {
+      navigate('/welcome', { replace: true });
+    }
+  }, [isLoggedIn, location.pathname]);
 
   return (
     <div id="app-shell" className={showHeader ? '' : 'no-header'}>
