@@ -24,6 +24,13 @@ function lsSet(key, val) {
 
 function todayStr() { return new Date().toDateString(); }
 
+// Resolve initial dark mode: use saved preference if set, otherwise follow system
+function getInitialDark() {
+  const saved = localStorage.getItem('perin_dark');
+  if (saved !== null) return saved === '1';
+  return window.matchMedia('(prefers-color-scheme: dark)').matches;
+}
+
 function reducer(state, action) {
   switch (action.type) {
     case 'SET_USER':
@@ -100,7 +107,7 @@ export function AppProvider({ children }) {
     activeLang: {},
     vocab: lsGet('perin_vocab', []),
     history: lsGet('perin_history', []),
-    dark: localStorage.getItem('perin_dark') === '1',
+    dark: getInitialDark(),
     lumaHistory: lsGet('perin_luma_history', []),
   });
 
@@ -120,10 +127,23 @@ export function AppProvider({ children }) {
     }
   }, [state.subscription]);
 
+  // Apply dark mode class and persist preference
   useEffect(() => {
     document.body.classList.toggle('dark', state.dark);
     localStorage.setItem('perin_dark', state.dark ? '1' : '0');
   }, [state.dark]);
+
+  // Listen for system dark mode changes (only when user hasn't set a preference)
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-color-scheme: dark)')
+    const handler = (e) => {
+      if (localStorage.getItem('perin_dark') === null) {
+        dispatch({ type: 'SET_DARK', payload: e.matches })
+      }
+    }
+    mq.addEventListener('change', handler)
+    return () => mq.removeEventListener('change', handler)
+  }, [])
 
   const syncToCloud = () => {
     if (!state.currentUser?.access_token) return;
@@ -155,15 +175,13 @@ export function AppProvider({ children }) {
           });
 
           if (!res.ok) throw new Error(`Sync failed: ${res.status}`);
-          syncRetryRef.current = 0; // reset on success
+          syncRetryRef.current = 0;
         } catch {
           attempt++;
           if (attempt < maxRetries) {
-            // Exponential backoff: 5s, 15s, 45s
             const delay = 5000 * Math.pow(3, attempt - 1);
             setTimeout(attemptSync, delay);
           }
-          // After max retries, give up silently — data is safe in localStorage
         }
       }
 

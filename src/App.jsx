@@ -2,7 +2,6 @@ import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { useEffect, useRef } from 'react';
 import { useApp } from './context/AppContext.jsx';
 import { useTTS } from './hooks/useTTS.js';
-import { useDarkMode } from './hooks/useDarkMode.js';
 import { ErrorBoundary } from './utils/ErrorBoundary';
 import Header from './components/Header.jsx';
 import Toast from './components/Toast.jsx';
@@ -43,10 +42,6 @@ function AppShell() {
   const navigate = useNavigate();
   const { unlockAudio } = useTTS();
   const audioUnlocked = useRef(false);
-
-  // Initialises dark mode from system preference / user override on mount.
-  // The hook applies the 'dark' class to document.documentElement automatically.
-  useDarkMode();
 
   const showHeader = !HIDE_HEADER_PATHS.has(location.pathname);
 
