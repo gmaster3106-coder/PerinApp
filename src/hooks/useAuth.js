@@ -12,6 +12,12 @@ function storeAuth(data, email) {
   return obj;
 }
 
+const DEFAULT_PROFILE = {
+  name: '', native: 'English', avatar: '🧑', xp: 0, sessions: 0,
+  streak: 0, lastDate: '', badges: [], streakFreezes: 0,
+  motivation: '', milestones: [],
+};
+
 // Pull saved profile/languages/vocab from Supabase after login
 async function pullCloudData(user, dispatch) {
   if (!user?.access_token || !user?.id) return;
@@ -60,6 +66,13 @@ export function useAuth() {
     if (!res.ok) throw new Error(data.error || data.msg || 'Login failed');
     if (!data.access_token) throw new Error('No access token received');
     const user = storeAuth(data, email);
+
+    // Clear previous user's data before loading new user's data
+    dispatch({ type: 'SET_PROFILE', payload: DEFAULT_PROFILE });
+    dispatch({ type: 'SET_LANGUAGES', payload: [] });
+    dispatch({ type: 'SET_ACTIVE_LANG', payload: {} });
+    dispatch({ type: 'SET_VOCAB', payload: [] });
+
     dispatch({ type: 'SET_USER', payload: user });
     fetchSubscription(user);
     await pullCloudData(user, dispatch);
@@ -74,6 +87,7 @@ export function useAuth() {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || data.msg || 'Signup failed');
+    if (data.error === 'email_already_registered') throw new Error('An account with this email already exists.');
     if (!data.access_token) {
       if (data.user || data.id) throw new Error('CONFIRM_EMAIL');
       throw new Error('Signup failed — please try again.');
