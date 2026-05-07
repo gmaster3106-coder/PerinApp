@@ -202,7 +202,9 @@ function parseOpeningMessage(text) {
   const welcomeText = goalIdx > 0 ? text.slice(0, goalIdx).trim() : '';
   let afterPhrase = '';
   if (phraseIdx > 0) {
-    const afterLine = text.slice(phraseIdx).split('\n').slice(1).join('\n').trim();
+    const afterLine = text.slice(phraseIdx).split('\n').slice(1)
+      .filter(l => !/[\u{1F511}\u{1FAB6}]/u.test(l))
+      .join('\n').trim();
     afterPhrase = afterLine;
   }
   // Strip retention chip lines from phraseMeaning
