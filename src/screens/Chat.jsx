@@ -214,11 +214,11 @@ function parseOpeningMessage(text) {
     .map(l => l.replace(/\u{1F511}.*/u, '').replace(/\u{1FAB6}.*/u, '').trim())
     .find(l => l.length > 0) || rawMeaning;
   return {
-    welcome: stripMd(welcomeText),
-    goal: goalMatch ? goalMatch[1].trim() : '',
+    welcome: stripChips(stripMd(welcomeText)),
+    goal: goalMatch ? stripChips(goalMatch[1].trim()) : '',
     phraseTarget: phraseMatch ? phraseMatch[1].trim() : '',
     phraseMeaning: cleanMeaning,
-    after: stripMd(afterPhrase),
+    after: stripChips(stripMd(afterPhrase)),
   };
 }
 
@@ -268,6 +268,17 @@ function stripAsteriskActions(text) {
     .replace(/\[\s*\]/g, '')
     .replace(/[ \t]{2,}/g, ' ')
     .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+
+function stripChips(text) {
+  if (!text) return '';
+  return text
+    .split('\n')
+    .map(l => l.replace(/\u{1F511}[^\n]*/u, '').replace(/\u{1FAB6}[^\n]*/u, '').trim())
+    .filter(l => l.length > 0)
+    .join('\n')
     .trim();
 }
 
@@ -337,7 +348,7 @@ function OpeningMessage({ msg, level, lang, onPlay, onLoop, onTranslate, onSave,
 }
 
 function AiMessage({ msg, level, lang, onPlay, onLoop, onTranslate, onSave, looping, translation, speaking }) {
-  const cleanText = stripAsteriskActions(msg.text);
+  const cleanText = stripChips(stripAsteriskActions(msg.text));
   const [saved, setSaved] = useState(false);
 
   function handleSaveMessage() {
@@ -614,7 +625,7 @@ RULES:
       let mainText = cleanText, grammarNote = '';
       if (!isInit && grammarMode) {
         const gIdx = cleanText.indexOf('📝 Grammar:');
-        if (gIdx !== -1) { mainText = cleanText.slice(0, gIdx).trim(); grammarNote = cleanText.slice(gIdx).trim(); }
+        if (gIdx !== -1) { mainText = cleanText.slice(0, gIdx).trim(); grammarNote = stripChips(cleanText.slice(gIdx).trim()); }
       }
 
       historyRef.current.push({ role: 'assistant', content: fullText });
