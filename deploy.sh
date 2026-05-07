@@ -1,6 +1,5 @@
 #!/bin/bash
 set -e
-
 DEV_HTML='<!DOCTYPE html>
 <html lang="en">
   <head>
@@ -13,11 +12,9 @@ DEV_HTML='<!DOCTYPE html>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>'
-
 echo "🔨 Building..."
 echo "$DEV_HTML" > index.html
 npm run build
-
 echo "📦 Deploying..."
 # Remove old asset files first to avoid stale files
 rm -f assets/index-*.js assets/index-*.css
@@ -29,11 +26,10 @@ cp dist/assets/index-*.css assets/ 2>/dev/null || true
 # Copy index.html for GitHub Pages
 cp dist/index.html index.html
 cp dist/index.html 404.html
-
+cp dist/sw.js sw.js
 git add -A
 git commit -m "${1:-update}"
 git push origin main
-
 # Restore dev index.html
 echo "$DEV_HTML" > index.html
 echo "✅ Deployed!"
