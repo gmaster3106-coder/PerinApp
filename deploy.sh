@@ -15,6 +15,13 @@ DEV_HTML='<!DOCTYPE html>
 echo "🔨 Building..."
 echo "$DEV_HTML" > index.html
 npm run build
+
+# Inject loading screen into built index.html
+LOADING='<div id="perin-splash" style="position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#0a1a3a;z-index:9999;transition:opacity .3s"><div style="font-family:Georgia,serif;font-size:2.2rem;font-weight:700;color:#fff;letter-spacing:.05em;margin-bottom:8px">Perin</div><div style="font-size:.78rem;color:rgba(255,255,255,.5);letter-spacing:.15em;text-transform:uppercase">Immersive Language Tutor</div><div style="margin-top:32px;width:36px;height:36px;border:3px solid rgba(255,255,255,.15);border-top-color:#4d7fff;border-radius:50%;animation:spin .8s linear infinite"></div><style>#perin-splash{font-family:system-ui,sans-serif}@keyframes spin{to{transform:rotate(360deg)}}</style></div><script>window.addEventListener("load",function(){setTimeout(function(){var s=document.getElementById("perin-splash");if(s){s.style.opacity="0";setTimeout(function(){s.remove()},300)}},400)})</script>'
+
+# Insert loading screen into root div
+sed -i '' "s|<div id=\"root\"></div>|<div id=\"root\">${LOADING}</div>|" dist/index.html
+
 echo "📦 Deploying..."
 # Remove old asset files first to avoid stale files
 rm -f assets/index-*.js assets/index-*.css
