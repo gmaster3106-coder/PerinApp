@@ -53,8 +53,23 @@ export default function Intro() {
   }
 
   function advance() {
+    clearInterval(timerRef.current);
     if (slide < SLIDES.length - 1) setSlide(s => s + 1);
     else done();
+  }
+
+  function goBack() {
+    clearInterval(timerRef.current);
+    if (slide > 0) setSlide(s => s - 1);
+  }
+
+  function handleClick(e) {
+    // Ignore clicks on buttons
+    if (e.target.closest('button')) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    if (x < rect.width / 2) goBack();
+    else advance();
   }
 
   function handleTouchStart(e) {
@@ -63,8 +78,13 @@ export default function Intro() {
 
   function handleTouchEnd(e) {
     const diff = touchStartX.current - e.changedTouches[0].clientX;
-    if (diff > 50) advance();
-    else if (diff < -50 && slide > 0) setSlide(s => s - 1);
+    if (Math.abs(diff) < 10) {
+      // Treat as tap — split left/right
+      const screenW = window.innerWidth;
+      if (touchStartX.current < screenW / 2) goBack();
+      else advance();
+    } else if (diff > 50) advance();
+    else if (diff < -50) goBack();
   }
 
   const s = SLIDES[slide];
@@ -73,8 +93,8 @@ export default function Intro() {
     <div
       id="screen-intro"
       className="screen active"
-      style={{ background:'var(--im-bg)', color:'var(--im-text)', overflow:'hidden', padding:0, position:'fixed', top:0, left:0, right:0, bottom:0, zIndex:200, height:'100dvh' }}
-      onClick={advance}
+      style={{ background:'var(--im-bg)', color:'var(--im-text)', overflow:'hidden', padding:0, position:'fixed', top:0, left:0, right:0, bottom:0, zIndex:200, height:'100dvh', cursor: 'pointer' }}
+      onClick={handleClick}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
