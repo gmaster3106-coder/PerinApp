@@ -1,4 +1,4 @@
-// public/sw.js — Perin Service Worker
+// public/sw.js — Perin Service Worker v2
 const CACHE_VERSION = 'perin-v1'
 const CACHE_NAME = `perin-${CACHE_VERSION}`
 
