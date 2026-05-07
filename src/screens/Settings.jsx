@@ -8,21 +8,20 @@ import { getAvatarColor, getAvatarInitials } from '../utils/avatarUtils.js';
 const PERIN_LS_KEYS = [
   'perin_auth', 'perin_profile', 'perin_languages', 'perin_vocab',
   'perin_history', 'perin_luma_history', 'perin_completed', 'perin_subscription',
-  'perin_dark', 'perin_accent', 'perin_voice_gender_pref', 'perin_tour_done',
+  'perin_dark', 'perin_dark_mode', 'perin_accent', 'perin_voice_gender_pref',
+  'perin_tour_done', 'perin_streak', 'perin_api_key',
 ];
 
 function clearAllPerinData() {
-  // Clear known keys
-  PERIN_LS_KEYS.forEach(k => localStorage.removeItem(k));
-  // Clear date-based keys
+  // Clear all keys starting with perin_ in one pass
   const keysToRemove = [];
   for (let i = 0; i < localStorage.length; i++) {
     const k = localStorage.key(i);
-    if (k && (k.startsWith('perin_') || k.startsWith('perin_mission') || k.startsWith('perin_daily'))) {
-      keysToRemove.push(k);
-    }
+    if (k && k.startsWith('perin_')) keysToRemove.push(k);
   }
   keysToRemove.forEach(k => localStorage.removeItem(k));
+  // Also clear known keys explicitly as a safety net
+  PERIN_LS_KEYS.forEach(k => localStorage.removeItem(k));
 }
 
 export default function Settings() {
@@ -53,6 +52,8 @@ export default function Settings() {
   function confirmResetProgress() {
     if (window.confirm('Reset all progress? This will clear your XP, badges, streaks, and completed scenarios.')) {
       dispatch({ type: 'RESET_PROGRESS' });
+      clearAllPerinData();
+      navigate('/welcome', { replace: true });
     }
   }
 
@@ -94,11 +95,9 @@ export default function Settings() {
         }).catch(() => {});
       }
 
-      // Clear all local data regardless of server response
       clearAllPerinData();
       navigate('/welcome', { replace: true });
     } catch {
-      // Even if server calls fail, clear local data and redirect
       clearAllPerinData();
       navigate('/welcome', { replace: true });
     }
