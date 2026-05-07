@@ -64,26 +64,29 @@ function AppShell() {
     };
   }, [unlockAudio]);
 
+  // Root redirect — runs once on mount
   useEffect(() => {
     const path = location.pathname;
     const isRoot = path === '/' || path === '/PerinApp' || path === '/PerinApp/';
-
-    if (isRoot) {
-      if (!isLoggedIn) {
-        navigate('/welcome', { replace: true });
-      } else if (!state.profile?.name) {
-        navigate('/onboarding', { replace: true });
-      } else {
-        navigate('/dashboard', { replace: true });
-      }
-      return;
+    if (!isRoot) return;
+    if (!isLoggedIn) {
+      navigate('/welcome', { replace: true });
+    } else if (!state.profile?.name) {
+      navigate('/onboarding', { replace: true });
+    } else {
+      navigate('/dashboard', { replace: true });
     }
+  }, []);
 
-    // Protect non-public routes — redirect to welcome if not logged in
+  // Auth guard — redirect to welcome if not logged in and on a protected route
+  useEffect(() => {
+    const path = location.pathname;
+    const isRoot = path === '/' || path === '/PerinApp' || path === '/PerinApp/';
+    if (isRoot) return;
     if (!isLoggedIn && !PUBLIC_PATHS.has(path)) {
       navigate('/welcome', { replace: true });
     }
-  }, [isLoggedIn, location.pathname]);
+  }, [isLoggedIn]);
 
   return (
     <div id="app-shell" className={showHeader ? '' : 'no-header'}>
