@@ -114,8 +114,16 @@ export function AppProvider({ children }) {
   const syncTimeoutRef = useRef(null);
   const syncRetryRef = useRef(0);
 
-  useEffect(() => { lsSet('perin_profile', state.profile); }, [state.profile]);
-  useEffect(() => { lsSet('perin_languages', state.languages); }, [state.languages]);
+  const isLoggedIn = !!state.currentUser?.access_token;
+
+  // Only persist profile and languages when logged in
+  useEffect(() => {
+    if (isLoggedIn) lsSet('perin_profile', state.profile);
+  }, [state.profile, isLoggedIn]);
+
+  useEffect(() => {
+    if (isLoggedIn) lsSet('perin_languages', state.languages);
+  }, [state.languages, isLoggedIn]);
   useEffect(() => { lsSet('perin_vocab', state.vocab); }, [state.vocab]);
   useEffect(() => { lsSet('perin_history', state.history); }, [state.history]);
   useEffect(() => { lsSet('perin_luma_history', state.lumaHistory); }, [state.lumaHistory]);
