@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext.jsx';
 import { showAuthModal } from '../components/AuthModal.jsx';
@@ -46,6 +46,11 @@ export default function Onboarding() {
   const [goal, setGoal] = useState(30);
 
   const isLoggedIn = !!state.currentUser?.access_token;
+
+  // Auto-advance past auth step when user logs in
+  useEffect(() => {
+    if (isLoggedIn && step === 3) setStep(4);
+  }, [isLoggedIn]);
 
   function handleNext() {
     if (step === 0 && !native) return;
