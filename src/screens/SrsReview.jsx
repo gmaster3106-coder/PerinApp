@@ -5,9 +5,8 @@ import { getValidToken } from '../utils/getValidToken.js';
 
 const WORKER_URL = 'https://perin-proxy.gmaster3106.workers.dev';
 
-// SRS intervals in days per strength level
-const SRS_INTERVALS =  [1, 3, 7, 14, 30];
-const SRS_ALMOST    =  [1, 2, 4, 7, 14]; // shorter intervals for "almost"
+const SRS_INTERVALS = [1, 3, 7, 14, 30];
+const SRS_ALMOST    = [1, 2, 4, 7, 14];
 
 function getStrengthLabel(s) {
   return ['🌱 New', '📖 Learning', '🔄 Familiar', '💪 Strong', '⭐ Mastered'][s || 0];
@@ -33,7 +32,6 @@ function applyCorrect(v) {
 }
 
 function applyAlmost(v) {
-  // Stay at same strength but review sooner
   const strength = v.strength || 0;
   const interval = SRS_ALMOST[strength] || 2;
   return { ...v, strength, interval, nextReview: Date.now() + interval * 86400000, reviews: (v.reviews || 0) + 1 };
@@ -53,30 +51,157 @@ function markMissionDoneIfMatch(types) {
   } catch { /* silent */ }
 }
 
-export default function SrsReview() {
+export default function MyWords() {
   const { state, dispatch } = useApp();
   const navigate = useNavigate();
+  const [tab, setTab] = useState('collection'); // 'collection' | 'review'
 
-  const languages  = state.languages || [];
-  const activeLang = state.activeLang?.lang ? state.activeLang : languages[0];
-  const lang       = activeLang?.lang    || '';
-  const dialect    = activeLang?.dialect || lang;
+  return (
+    <div className="screen active" style={{ alignItems: 'center', padding: '28px 16px 60px' }}>
+      <div style={{ width: '100%', maxWidth: '560px' }}>
+        <div style={{ marginBottom: 20 }}>
+          <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: '1.45rem', marginBottom: 5 }}>💭 My Words</h2>
+          <p style={{ color: 'var(--muted)', fontSize: '.85rem' }}>Your saved vocabulary and session phrases.</p>
+        </div>
 
-  const [phase, setPhase]         = useState('empty');
-  const [queue, setQueue]         = useState([]);
-  const [index, setIndex]         = useState(0);
-  const [correct, setCorrect]     = useState(0);
-  const [examples, setExamples]   = useState(null);
+        {/* Tabs */}
+        <div style={{ display: 'flex', borderBottom: '2px solid var(--border)', marginBottom: 20 }}>
+          {[['collection', 'Collection'], ['review', 'Review']].map(([key, label]) => (
+            <button
+              key={key}
+              onClick={() => setTab(key)}
+              style={{
+                flex: 1, padding: '9px', textAlign: 'center', fontSize: '.85rem', fontWeight: 600,
+                cursor: 'pointer', background: 'none', border: 'none', fontFamily: "'DM Sans',sans-serif",
+                color: tab === key ? 'var(--accent)' : 'var(--muted)',
+                borderBottom: `3px solid ${tab === key ? 'var(--accent)' : 'transparent'}`,
+                marginBottom: '-2px', transition: 'all .2s',
+              }}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {tab === 'collection' && <CollectionTab state={state} navigate={navigate} onStartReview={() => setTab('review')} />}
+        {tab === 'review' && <ReviewTab state={state} dispatch={dispatch} navigate={navigate} />}
+      </div>
+    </div>
+  );
+}
+
+// ── COLLECTION TAB ────────────────────────────────────────────────────────────
+function CollectionTab({ state, navigate, onStartReview }) {
+  const lang = state.activeLang?.lang || state.languages?.[0]?.lang || '';
+  const vocab = loadVocab().filter(v => !v.lang || v.lang === lang);
+  const due = getDueWords(vocab);
+
+  const mastered   = vocab.filter(m => (m.strength || 0) >= 3);
+  const inProgress = vocab.filter(m => (m.strength || 0) > 0 && (m.strength || 0) < 3);
+  const newOnes    = vocab.filter(m => (m.strength || 0) === 0);
+
+  return (
+    <div>
+      {/* Stats */}
+      {vocab.length > 0 && (
+        <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
+          {[
+            { label: 'Total', val: vocab.length, color: 'var(--accent)' },
+            { label: 'Mastered', val: mastered.length, color: '#2e7d32' },
+            { label: 'Due', val: due.length, color: due.length > 0 ? '#f59e0b' : 'var(--muted)' },
+          ].map(s => (
+            <div key={s.label} style={{ flex: 1, background: 'var(--card)', border: '1.5px solid var(--border)', borderRadius: 12, padding: '12px 8px', textAlign: 'center' }}>
+              <div style={{ fontSize: '1.3rem', fontWeight: 700, color: s.color }}>{s.val}</div>
+              <div style={{ fontSize: '.68rem', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.08em', marginTop: 2 }}>{s.label}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Saved words */}
+      <div style={{ fontSize: '.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.12em', color: 'var(--muted)', marginBottom: 10 }}>
+        💾 Saved words
+      </div>
+
+      {vocab.length === 0 ? (
+        <div style={{ background: 'var(--card)', border: '1.5px solid var(--border)', borderRadius: 14, padding: '24px 20px', textAlign: 'center', marginBottom: 20 }}>
+          <div style={{ fontSize: '2rem', marginBottom: 8 }}>📭</div>
+          <p style={{ fontWeight: 600, fontSize: '.9rem', marginBottom: 6 }}>No saved words yet</p>
+          <p style={{ color: 'var(--muted)', fontSize: '.82rem', lineHeight: 1.6, marginBottom: 16 }}>
+            Tap 💾 on any phrase during a conversation to save it here.
+          </p>
+          <button className="fib-next-btn" onClick={() => navigate('/scenarios')} style={{ fontSize: '.82rem', padding: '10px' }}>
+            Start a Conversation →
+          </button>
+        </div>
+      ) : (
+        <>
+          <WordGroup title="Mastered" emoji="⭐" items={mastered} />
+          <WordGroup title="In progress" emoji="🔄" items={inProgress} />
+          <WordGroup title="New" emoji="🌱" items={newOnes} />
+
+          {due.length > 0 && (
+            <button onClick={onStartReview} style={{ width: '100%', background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 12, padding: '12px', fontFamily: "'DM Sans',sans-serif", fontSize: '.88rem', fontWeight: 600, cursor: 'pointer', marginTop: 8, marginBottom: 20 }}>
+              🔁 Review {due.length} due word{due.length !== 1 ? 's' : ''} →
+            </button>
+          )}
+        </>
+      )}
+
+      {/* From sessions */}
+      <div style={{ fontSize: '.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.12em', color: 'var(--muted)', marginBottom: 10, marginTop: 8 }}>
+        💬 From sessions
+      </div>
+      <div style={{ background: 'var(--card)', border: '1.5px solid var(--border)', borderRadius: 14, padding: '20px', textAlign: 'center' }}>
+        <div style={{ fontSize: '1.8rem', marginBottom: 8 }}>🔮</div>
+        <p style={{ fontWeight: 600, fontSize: '.88rem', marginBottom: 6 }}>Coming soon</p>
+        <p style={{ color: 'var(--muted)', fontSize: '.80rem', lineHeight: 1.6 }}>
+          Phrases you encounter in conversations will automatically appear here — no saving required.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function WordGroup({ title, emoji, items }) {
+  if (!items.length) return null;
+  return (
+    <div style={{ marginBottom: 18 }}>
+      <div style={{ fontSize: '.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--muted)', marginBottom: 8 }}>
+        {emoji} {title}
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+        {items.map((v, i) => (
+          <div key={i} style={{ background: 'var(--card)', border: '1.5px solid var(--border)', borderRadius: 11, padding: '11px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: '.92rem', color: 'var(--ink)' }}>{v.word}</div>
+              {v.meaning && <div style={{ fontSize: '.76rem', color: 'var(--muted)', marginTop: 2 }}>{v.meaning}</div>}
+            </div>
+            <div style={{ fontSize: '.65rem', color: 'var(--muted)', flexShrink: 0, marginLeft: 10 }}>{getStrengthLabel(v.strength)}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── REVIEW TAB ────────────────────────────────────────────────────────────────
+function ReviewTab({ state, dispatch, navigate }) {
+  const lang    = state.activeLang?.lang    || state.languages?.[0]?.lang    || '';
+  const dialect = state.activeLang?.dialect || state.languages?.[0]?.dialect || lang;
+
+  const [phase, setPhase]       = useState('init');
+  const [queue, setQueue]       = useState([]);
+  const [index, setIndex]       = useState(0);
+  const [correct, setCorrect]   = useState(0);
+  const [examples, setExamples] = useState(null);
   const [remainingDue, setRemainingDue] = useState(0);
   const [filterLang, setFilterLang] = useState('all');
 
-  // Get unique languages from vocab
   const allVocab = loadVocab();
   const vocabLangs = ['all', ...new Set(allVocab.map(v => v.lang).filter(Boolean))];
 
-  useEffect(() => {
-    loadQueue('all');
-  }, []);
+  useEffect(() => { loadQueue('all'); }, []);
 
   function loadQueue(langFilter) {
     const vocab = loadVocab();
@@ -126,28 +251,21 @@ export default function SrsReview() {
   }
 
   function answer(result) {
-    // result: 'correct' | 'almost' | 'wrong'
     const v = queue[index];
     let updated;
-    if (result === 'correct') {
-      updated = applyCorrect(v);
-      setCorrect(c => c + 1);
-    } else if (result === 'almost') {
-      updated = applyAlmost(v);
-    } else {
-      updated = applyWrong(v);
-    }
+    if (result === 'correct') { updated = applyCorrect(v); setCorrect(c => c + 1); }
+    else if (result === 'almost') { updated = applyAlmost(v); }
+    else { updated = applyWrong(v); }
 
-    const allVocab = loadVocab();
-    const idx = allVocab.findIndex(sv => sv.word === v.word && sv.lang === v.lang);
-    if (idx !== -1) allVocab[idx] = updated;
-    saveVocab(allVocab);
+    const all = loadVocab();
+    const idx = all.findIndex(sv => sv.word === v.word && sv.lang === v.lang);
+    if (idx !== -1) all[idx] = updated;
+    saveVocab(all);
 
     const nextIndex = index + 1;
     if (nextIndex >= queue.length) {
       const finalCorrect = result === 'correct' ? correct + 1 : correct;
-      const xp = finalCorrect * 5;
-      dispatch({ type: 'AWARD_XP', payload: xp });
+      dispatch({ type: 'AWARD_XP', payload: finalCorrect * 5 });
       markMissionDoneIfMatch(['srs', 'vocab', 'vocabquiz']);
       setRemainingDue(getDueWords(loadVocab()).length);
       setPhase('done');
@@ -158,53 +276,30 @@ export default function SrsReview() {
     }
   }
 
-  function restart() {
-    loadQueue(filterLang);
-  }
-
-  if (phase === 'empty') {
-    return (
-      <div className="screen active" style={{ alignItems: 'center', padding: '28px 16px 60px' }}>
-        <div className="fib-wrap">
-          <Header />
-          {/* Language filter even on empty state */}
-          {vocabLangs.length > 2 && (
-            <LangFilter langs={vocabLangs} current={filterLang} onChange={handleFilterChange} />
-          )}
-          <div style={{ textAlign: 'center', padding: '48px 16px' }}>
-            <div style={{ fontSize: '3rem', marginBottom: 12 }}>🎉</div>
-            <p style={{ fontWeight: 700, fontSize: '1.1rem', marginBottom: 8 }}>Nothing due for review!</p>
-            <p style={{ color: 'var(--muted)', fontSize: '.85rem', marginBottom: 24 }}>
-              You're all caught up. Save words during conversations to build your review queue.
-            </p>
-            <button className="fib-next-btn" onClick={() => navigate('/dashboard')}>Back to Dashboard</button>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  if (phase === 'init' || phase === 'empty') return (
+    <div style={{ textAlign: 'center', padding: '40px 16px' }}>
+      <div style={{ fontSize: '3rem', marginBottom: 12 }}>🎉</div>
+      <p style={{ fontWeight: 700, fontSize: '1rem', marginBottom: 8 }}>Nothing due for review!</p>
+      <p style={{ color: 'var(--muted)', fontSize: '.84rem', marginBottom: 20, lineHeight: 1.6 }}>
+        You're all caught up. Save words during conversations to build your review queue.
+      </p>
+      <button className="fib-next-btn" onClick={() => navigate('/scenarios')}>Start a Conversation</button>
+    </div>
+  );
 
   if (phase === 'done') {
     const total = queue.length;
     const xp = correct * 5;
     return (
-      <div className="screen active" style={{ alignItems: 'center', padding: '28px 16px 60px' }}>
-        <div className="fib-wrap">
-          <Header />
-          <div className="fib-score-card">
-            <p style={{ fontSize: '.72rem', textTransform: 'uppercase', letterSpacing: '.1em', color: 'rgba(255,255,255,.5)', marginBottom: 8 }}>🔁 Vocab Review</p>
-            <div className="fib-score-big">{correct}<span style={{ fontSize: '1.4rem', color: 'rgba(255,255,255,.5)' }}>/{total}</span></div>
-            <p>words remembered</p>
-            <div className="quiz-score-badge" style={{ marginTop: 10 }}>+{xp} XP</div>
-          </div>
-          <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
-            {remainingDue > 0 && <button className="fib-next-btn" onClick={restart} style={{ flex: 1 }}>Keep reviewing 🔁</button>}
-            <button className="fib-next-btn" onClick={() => navigate('/dashboard')} style={{ flex: 1, background: 'var(--card)', color: 'var(--ink)', border: '1.5px solid var(--border)' }}>Dashboard</button>
-          </div>
-          <div style={{ marginTop: 12, textAlign: 'center' }}>
-            <p style={{ fontSize: '.75rem', color: 'var(--muted)', marginBottom: 8 }}>Put these words in context</p>
-            <button onClick={() => navigate('/fib')} style={{ background: 'none', border: '1.5px solid var(--border)', borderRadius: 10, padding: '8px 16px', fontFamily: "'DM Sans',sans-serif", fontSize: '.8rem', color: 'var(--ink)', cursor: 'pointer', width: '100%' }}>✏️ Try Fill the Blank →</button>
-          </div>
+      <div>
+        <div className="fib-score-card">
+          <p style={{ fontSize: '.72rem', textTransform: 'uppercase', letterSpacing: '.1em', color: 'rgba(255,255,255,.5)', marginBottom: 8 }}>🔁 Review</p>
+          <div className="fib-score-big">{correct}<span style={{ fontSize: '1.4rem', color: 'rgba(255,255,255,.5)' }}>/{total}</span></div>
+          <p>words remembered · +{xp} XP</p>
+        </div>
+        <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
+          {remainingDue > 0 && <button className="fib-next-btn" onClick={() => loadQueue(filterLang)} style={{ flex: 1 }}>Keep reviewing 🔁</button>}
+          <button className="fib-next-btn" onClick={() => navigate('/dashboard')} style={{ flex: 1, background: 'var(--card)', color: 'var(--ink)', border: '1.5px solid var(--border)' }}>Dashboard</button>
         </div>
       </div>
     );
@@ -215,115 +310,55 @@ export default function SrsReview() {
   const revealed = phase === 'revealed';
 
   return (
-    <div className="screen active" style={{ alignItems: 'center', padding: '28px 16px 60px' }}>
-      <div className="fib-wrap">
-        <Header />
+    <div>
+      {vocabLangs.length > 2 && (
+        <div style={{ display: 'flex', gap: 6, marginBottom: 14, flexWrap: 'wrap' }}>
+          {vocabLangs.map(l => (
+            <button key={l} onClick={() => handleFilterChange(l)} style={{ padding: '4px 12px', borderRadius: 20, border: '1.5px solid', borderColor: filterLang === l ? 'var(--accent)' : 'var(--border)', background: filterLang === l ? 'var(--accent)' : 'var(--card)', color: filterLang === l ? '#fff' : 'var(--muted)', fontFamily: "'DM Sans',sans-serif", fontSize: '.72rem', fontWeight: 600, cursor: 'pointer' }}>
+              {l === 'all' ? 'All languages' : l}
+            </button>
+          ))}
+        </div>
+      )}
 
-        {/* Language filter */}
-        {vocabLangs.length > 2 && (
-          <LangFilter langs={vocabLangs} current={filterLang} onChange={handleFilterChange} />
+      <div className="fib-card">
+        <div className="fib-progress">
+          {queue.map((_, i) => <div key={i} className={`fib-progress-dot${i < index ? ' done' : ''}`} />)}
+        </div>
+        <div className="fib-counter">{index + 1} of {total} · {getStrengthLabel(v.strength)}</div>
+        <div style={{ textAlign: 'center', padding: '24px 0 16px' }}>
+          <div style={{ fontSize: '1.6rem', fontWeight: 700, color: 'var(--ink)', marginBottom: 8 }}>{v.word}</div>
+          <div style={{ fontSize: '.8rem', color: 'var(--muted)' }}>{v.lang || ''}</div>
+        </div>
+        {!revealed && <button className="fib-next-btn" onClick={reveal}>Show meaning</button>}
+        {revealed && (
+          <>
+            <div style={{ background: 'var(--cream)', borderRadius: 12, padding: 16, margin: '14px 0', textAlign: 'center' }}>
+              <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--ink)' }}>{v.meaning}</div>
+            </div>
+            {examples === 'loading' && <div style={{ fontSize: '.75rem', color: 'var(--muted)', margin: '12px 0' }}>Loading examples…</div>}
+            {Array.isArray(examples) && examples.length > 0 && (
+              <div style={{ borderTop: '1px solid var(--border)', marginTop: 12, paddingTop: 12, marginBottom: 14 }}>
+                <div style={{ fontSize: '.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--muted)', marginBottom: 8 }}>In context</div>
+                {examples.map((ex, i) => (
+                  <div key={i} style={{ marginBottom: 8 }}>
+                    <div style={{ fontSize: '.88rem', fontWeight: 600, color: 'var(--ink)' }}>{ex.s}</div>
+                    <div style={{ fontSize: '.78rem', color: 'var(--muted)' }}>{ex.t}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+              <button className="fib-next-btn" onClick={() => answer('wrong')} style={{ flex: 1, background: '#fce8e8', color: 'var(--danger)', border: '2px solid var(--danger)', fontSize: '.78rem', padding: '10px 6px' }}>❌ Forgot</button>
+              <button className="fib-next-btn" onClick={() => answer('almost')} style={{ flex: 1, background: '#fef9c3', color: '#92400e', border: '2px solid #f59e0b', fontSize: '.78rem', padding: '10px 6px' }}>🤔 Almost</button>
+              <button className="fib-next-btn" onClick={() => answer('correct')} style={{ flex: 1, background: '#e8f5e9', color: '#2e7d32', border: '2px solid #4caf50', fontSize: '.78rem', padding: '10px 6px' }}>✅ Got it</button>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: '.62rem', color: 'var(--muted)', padding: '0 2px' }}>
+              <span>Reset to day 1</span><span>Review sooner</span><span>Advance level</span>
+            </div>
+          </>
         )}
-
-        <div className="fib-card">
-          <div className="fib-progress">
-            {queue.map((_, i) => <div key={i} className={`fib-progress-dot${i < index ? ' done' : ''}`} />)}
-          </div>
-          <div className="fib-counter">{index + 1} of {total} · {getStrengthLabel(v.strength)}</div>
-          <div style={{ textAlign: 'center', padding: '24px 0 16px' }}>
-            <div style={{ fontSize: '1.6rem', fontWeight: 700, color: 'var(--ink)', marginBottom: 8 }}>{v.word}</div>
-            <div style={{ fontSize: '.8rem', color: 'var(--muted)' }}>{v.lang || ''}</div>
-          </div>
-          {!revealed && <button className="fib-next-btn" onClick={reveal}>Show meaning</button>}
-          {revealed && (
-            <>
-              <div style={{ background: 'var(--cream)', borderRadius: 12, padding: 16, margin: '14px 0', textAlign: 'center' }}>
-                <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--ink)' }}>{v.meaning}</div>
-              </div>
-              <Examples examples={examples} />
-
-              {/* 3-button rating */}
-              <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
-                <button
-                  className="fib-next-btn"
-                  onClick={() => answer('wrong')}
-                  style={{ flex: 1, background: '#fce8e8', color: 'var(--danger)', border: '2px solid var(--danger)', fontSize: '.78rem', padding: '10px 6px' }}
-                >
-                  ❌ Forgot
-                </button>
-                <button
-                  className="fib-next-btn"
-                  onClick={() => answer('almost')}
-                  style={{ flex: 1, background: '#fef9c3', color: '#92400e', border: '2px solid #f59e0b', fontSize: '.78rem', padding: '10px 6px' }}
-                >
-                  🤔 Almost
-                </button>
-                <button
-                  className="fib-next-btn"
-                  onClick={() => answer('correct')}
-                  style={{ flex: 1, background: '#e8f5e9', color: '#2e7d32', border: '2px solid #4caf50', fontSize: '.78rem', padding: '10px 6px' }}
-                >
-                  ✅ Got it
-                </button>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: '.62rem', color: 'var(--muted)', padding: '0 2px' }}>
-                <span>Reset to day 1</span>
-                <span>Review sooner</span>
-                <span>Advance level</span>
-              </div>
-            </>
-          )}
-        </div>
       </div>
-    </div>
-  );
-}
-
-function LangFilter({ langs, current, onChange }) {
-  return (
-    <div style={{ display: 'flex', gap: 6, marginBottom: 14, flexWrap: 'wrap' }}>
-      {langs.map(l => (
-        <button
-          key={l}
-          onClick={() => onChange(l)}
-          style={{
-            padding: '4px 12px', borderRadius: 20, border: '1.5px solid',
-            borderColor: current === l ? 'var(--accent)' : 'var(--border)',
-            background: current === l ? 'var(--accent)' : 'var(--card)',
-            color: current === l ? '#fff' : 'var(--muted)',
-            fontFamily: "'DM Sans',sans-serif", fontSize: '.72rem', fontWeight: 600,
-            cursor: 'pointer', transition: 'all .15s',
-            textTransform: l === 'all' ? 'capitalize' : 'none',
-          }}
-        >
-          {l === 'all' ? 'All languages' : l}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-function Header() {
-  return (
-    <div style={{ marginBottom: 18 }}>
-      <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: '1.45rem', marginBottom: 5 }}>🔁 Vocab Review</h2>
-      <p style={{ color: 'var(--muted)', fontSize: '.85rem' }}>Review your saved words with spaced repetition.</p>
-    </div>
-  );
-}
-
-function Examples({ examples }) {
-  if (!examples) return null;
-  if (examples === 'loading') return <div style={{ fontSize: '.75rem', color: 'var(--muted)', margin: '12px 0' }}>Loading examples…</div>;
-  if (!examples.length) return null;
-  return (
-    <div style={{ borderTop: '1px solid var(--border)', marginTop: 12, paddingTop: 12, marginBottom: 14 }}>
-      <div style={{ fontSize: '.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--muted)', marginBottom: 8 }}>In context</div>
-      {examples.map((ex, i) => (
-        <div key={i} style={{ marginBottom: 8 }}>
-          <div style={{ fontSize: '.88rem', fontWeight: 600, color: 'var(--ink)' }}>{ex.s}</div>
-          <div style={{ fontSize: '.78rem', color: 'var(--muted)' }}>{ex.t}</div>
-        </div>
-      ))}
     </div>
   );
 }
