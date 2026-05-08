@@ -62,11 +62,13 @@ export function useMic() {
   const streamRef = useRef(null);
   const stopSilenceRef = useRef(null);
 
-  const transcribe = useCallback(async ({ blob, mime, lang, accessToken }) => {
+  const transcribe = useCallback(async ({ blob, mime, lang, accessToken, hint }) => {
     const form = new FormData();
     form.append('file', blob, getFilename(mime));
     const langCode = lang?.slice(0, 2);
     if (langCode && langCode !== 'en') form.append('language', langCode);
+    // Pass last AI message as prompt hint to improve Whisper accuracy
+    if (hint) form.append('prompt', hint.slice(0, 200));
 
     const res = await fetch(`${WORKER_URL}/api/stt`, {
       method: 'POST',
@@ -78,7 +80,7 @@ export function useMic() {
     return (data.text || '').trim();
   }, []);
 
-  const startRecording = useCallback(async ({ lang, accessToken, onResult, onError, onStart }) => {
+  const startRecording = useCallback(async ({ lang, accessToken, hint, onResult, onError, onStart }) => {
     if (isRecording) return;
 
     try {
@@ -110,7 +112,7 @@ export function useMic() {
         if (chunks.length === 0) return;
         const blob = new Blob(chunks, { type: mime || 'audio/webm' });
         try {
-          const text = await transcribe({ blob, mime, lang, accessToken });
+          const text = await transcribe({ blob, mime, lang, accessToken, hint });
           const HALLUCINATIONS = /^(thank you|thanks|you|the|uh|um|okay|ok|yes|no|bye|hi|hey|hmm|hm|\.+|\s*)$/i;
           if (text && text.length > 1 && !HALLUCINATIONS.test(text)) {
             onResult?.(text);

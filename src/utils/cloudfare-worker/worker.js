@@ -317,11 +317,14 @@ export default {
       const language = rawLanguage.replace(/[^a-zA-Z-]/g, '').slice(0, 10);
       if (!file) return corsResponse(JSON.stringify({ error: 'audio file required' }), 400, origin);
       if (file.size && file.size > 5000000) return corsResponse(JSON.stringify({ error: 'Audio too large' }), 413, origin);
+      const rawPrompt = formData.get('prompt') || '';
+      const prompt = String(rawPrompt).slice(0, 200); // Whisper prompt hint
       const outForm = new FormData();
       outForm.append('file', file);
       outForm.append('model', 'whisper-1');
       outForm.append('response_format', 'verbose_json');
       if (language) outForm.append('language', language);
+      if (prompt) outForm.append('prompt', prompt);
       const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${env.OPENAI_KEY}` },

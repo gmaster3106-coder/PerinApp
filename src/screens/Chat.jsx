@@ -735,7 +735,17 @@ RULES:
   async function handleMic() {
     if (isRecording) { stopRecording(); return; }
     const token = await getValidToken();
-    startRecording({ lang: dialect, accessToken: token, onResult: (t) => sendMessage(t), onError: (e) => console.error(e) });
+    // Get last AI message as Whisper prompt hint
+    const lastAi = [...messages].reverse().find(m => m.role === 'ai');
+    const hint = lastAi ? (lastAi.text || '').slice(0, 200) : '';
+    startRecording({
+      lang: dialect,
+      accessToken: token,
+      hint,
+      // Show transcription in input box so user can review/edit before sending
+      onResult: (t) => setInput(t),
+      onError: (e) => console.error(e),
+    });
   }
 
   async function sendQuick(type) {
