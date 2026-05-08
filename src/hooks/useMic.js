@@ -65,8 +65,10 @@ export function useMic() {
   const transcribe = useCallback(async ({ blob, mime, lang, accessToken, hint }) => {
     const form = new FormData();
     form.append('file', blob, getFilename(mime));
-    const langCode = lang?.slice(0, 2);
-    if (langCode && langCode !== 'en') form.append('language', langCode);
+    // Use base language code only — Whisper doesn't support dialect codes like 'do'
+    const langCode = lang?.slice(0, 2).toLowerCase();
+    const WHISPER_SUPPORTED = ['es','fr','it','pt','en','ht'];
+    if (langCode && WHISPER_SUPPORTED.includes(langCode)) form.append('language', langCode);
     // Pass last AI message as prompt hint to improve Whisper accuracy
     if (hint) form.append('prompt', hint.slice(0, 200));
 
