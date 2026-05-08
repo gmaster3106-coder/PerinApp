@@ -739,7 +739,7 @@ RULES:
     const lastAi = [...messages].reverse().find(m => m.role === 'ai');
     const hint = lastAi ? (lastAi.text || '').slice(0, 200) : '';
     startRecording({
-      lang: dialect,
+      lang: lang, // use base language not dialect — Whisper doesn't support dialect codes
       accessToken: token,
       hint,
       // Show transcription in input box so user can review/edit before sending
