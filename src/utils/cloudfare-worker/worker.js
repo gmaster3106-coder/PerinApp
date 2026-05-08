@@ -106,14 +106,21 @@ export default {
       if (!env.ELEVENLABS_KEY) return corsResponse(JSON.stringify({ error: 'Key not configured' }), 500, origin);
       let body;
       try { body = await request.json(); } catch { return corsResponse(JSON.stringify({ error: 'Invalid JSON' }), 400, origin); }
-      const { text, voice_id, model_id = 'eleven_multilingual_v2', language_code } = body;
+      const { text, voice_id, model_id = 'eleven_multilingual_v2', language_code, voice_settings } = body;
       if (!text || !voice_id) return corsResponse(JSON.stringify({ error: 'text and voice_id required' }), 400, origin);
       if (text.length > 1000) return corsResponse(JSON.stringify({ error: 'Text too long' }), 400, origin);
-      const voiceSettings = { stability: 0.50, similarity_boost: 0.75, style: 0.0, use_speaker_boost: false };
+      // Use client-provided voice settings (dialect-specific) or fall back to defaults
+      const defaultSettings = { stability: 0.50, similarity_boost: 0.75, style: 0.0, use_speaker_boost: false };
+      const safeSettings = voice_settings && typeof voice_settings === 'object' ? {
+        stability: Math.min(1, Math.max(0, Number(voice_settings.stability ?? defaultSettings.stability))),
+        similarity_boost: Math.min(1, Math.max(0, Number(voice_settings.similarity_boost ?? defaultSettings.similarity_boost))),
+        style: Math.min(1, Math.max(0, Number(voice_settings.style ?? defaultSettings.style))),
+        use_speaker_boost: false,
+      } : defaultSettings;
       const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voice_id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'xi-api-key': env.ELEVENLABS_KEY },
-        body: JSON.stringify({ text, model_id, ...(language_code ? { language_code } : {}), voice_settings: voiceSettings }),
+        body: JSON.stringify({ text, model_id, ...(language_code ? { language_code } : {}), voice_settings: safeSettings }),
       });
       if (!response.ok) return corsResponse(JSON.stringify({ error: 'TTS error' }), response.status, origin);
       return new Response(response.body, {

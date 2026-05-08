@@ -131,7 +131,7 @@ export default function ListeningMode() {
     setPlaying(true);
     try {
       const token = await getValidToken();
-      await speak({ text: q.sentence, voiceId, lang: langCode, accessToken: token });
+      await speak({ text: q.sentence, voiceId, lang: langCode, dialect, accessToken: token });
     } finally {
       setPlaying(false);
     }
@@ -284,7 +284,7 @@ export default function ListeningMode() {
               onClick={handleMic}
               disabled={answered}
               style={{
-                width: 46, height: 46, borderRadius: '50%', cursor: answered ? 'not-allowed' : 'pointer',
+                width: 46, height: 46, borderRadius: '50%', border: 'none', cursor: answered ? 'not-allowed' : 'pointer',
                 background: isRecording ? '#dc2626' : 'var(--cream)',
                 border: `1.5px solid ${isRecording ? '#dc2626' : 'var(--border)'}`,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',

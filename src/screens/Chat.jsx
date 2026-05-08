@@ -461,7 +461,7 @@ export default function Chat() {
     setSpeakingId(msgId || null);
     try {
       const token = await getValidToken();
-      await speak({ text, voiceId, lang: getLangCode(lang, dialect), accessToken: token });
+      await speak({ text, voiceId, lang: getLangCode(lang, dialect), dialect, accessToken: token });
     } finally {
       setSpeakingId(null);
     }
@@ -651,7 +651,7 @@ RULES:
         const first = mainText.split(/(?<=[.!?])\s+/)[0] || mainText;
         const ttsText = first.length < 120 ? first : mainText.slice(0, 120);
         const token = await getValidToken();
-        speak({ text: ttsText, voiceId, lang: getLangCode(lang, dialect), accessToken: token });
+        speak({ text: ttsText, voiceId, lang: getLangCode(lang, dialect), dialect, accessToken: token });
       }
 
       if (scenarioComplete && mode !== 'freechat') setTimeout(endSession, 2000);

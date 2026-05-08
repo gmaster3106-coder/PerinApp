@@ -3,6 +3,67 @@ import { WORKER_URL, isSafariIOS } from '../config/constants.js';
 import { getValidToken } from '../utils/getValidToken.js';
 import { ELEVENLABS_VOICES, getVoiceId as getVoiceIdFromData } from '../data/voices.js';
 
+// Dialect-specific voice settings based on natural speech rate research
+function getVoiceSettings(dialect = '', lang = '') {
+  const d = (dialect || '').toLowerCase();
+  const l = (lang || '').toLowerCase();
+
+  // Caribbean Spanish — fastest, most musical
+  if (d.includes('dominican') || d.includes('puerto') || d.includes('cuban') ||
+      d.includes('venezuelan') || d.includes('panamanian') || d.includes('caribbean')) {
+    return { stability: 0.30, similarity_boost: 0.85, style: 0.20, use_speaker_boost: false };
+  }
+  // Parisian French — fast, clipped
+  if ((l.includes('french') || d.includes('french')) &&
+      (d.includes('paris') || d.includes('parisian') || (!d.includes('southern') && !d.includes('provence')))) {
+    return { stability: 0.35, similarity_boost: 0.80, style: 0.15, use_speaker_boost: false };
+  }
+  // Castilian Spanish — moderately fast
+  if (d.includes('castilian') || d.includes('spain') || d.includes('madrid')) {
+    return { stability: 0.38, similarity_boost: 0.80, style: 0.10, use_speaker_boost: false };
+  }
+  // Neapolitan — expressive, punchy
+  if (d.includes('napolitan') || d.includes('naples') || d.includes('napoli')) {
+    return { stability: 0.40, similarity_boost: 0.82, style: 0.18, use_speaker_boost: false };
+  }
+  // Italian — expressive, moderate
+  if (l.includes('italian') || d.includes('italian') || d.includes('sicilian')) {
+    return { stability: 0.48, similarity_boost: 0.78, style: 0.10, use_speaker_boost: false };
+  }
+  // Mexican Spanish — clear, neutral
+  if (d.includes('mexican') || d.includes('mexico')) {
+    return { stability: 0.50, similarity_boost: 0.78, style: 0.05, use_speaker_boost: false };
+  }
+  // Brazilian Portuguese — open, moderate
+  if (d.includes('brazilian') || d.includes('brazil') || d.includes('carioca')) {
+    return { stability: 0.52, similarity_boost: 0.78, style: 0.05, use_speaker_boost: false };
+  }
+  // Haitian Creole — moderate
+  if (l.includes('creole') || d.includes('haiti') || d.includes('haitian')) {
+    return { stability: 0.50, similarity_boost: 0.75, style: 0.05, use_speaker_boost: false };
+  }
+  // Colombian Spanish — slow, clear
+  if (d.includes('colombian') || d.includes('colombia') || d.includes('bogot')) {
+    return { stability: 0.55, similarity_boost: 0.75, style: 0.05, use_speaker_boost: false };
+  }
+  // Southern French — slow, melodic
+  if (d.includes('southern') || d.includes('provence') || d.includes('marseille')) {
+    return { stability: 0.60, similarity_boost: 0.75, style: 0.05, use_speaker_boost: false };
+  }
+  // European Portuguese — fast but clear
+  if (d.includes('european') || d.includes('portugal') || d.includes('lisbon')) {
+    return { stability: 0.38, similarity_boost: 0.80, style: 0.08, use_speaker_boost: false };
+  }
+
+  // Default
+  return { stability: 0.50, similarity_boost: 0.75, style: 0.0, use_speaker_boost: false };
+}
+
+// Slow mode settings — for when user explicitly asks to hear it clearly
+export const SLOW_VOICE_SETTINGS = {
+  stability: 0.75, similarity_boost: 0.75, style: 0.0, use_speaker_boost: false
+};
+
 export function useTTS() {
   const currentAudioRef = useRef(null);
   const safariCtxRef = useRef(null);
@@ -16,7 +77,7 @@ export function useTTS() {
     requestIdRef.current++;
   }, []);
 
-  const speak = useCallback(async ({ text, voiceId, lang, accessToken, natural = false }) => {
+  const speak = useCallback(async ({ text, voiceId, lang, accessToken, dialect, slow = false }) => {
     if (!text) return;
     stopAudio();
 
@@ -30,7 +91,6 @@ export function useTTS() {
 
     const myId = ++requestIdRef.current;
 
-    // Only use AudioContext on iOS Safari — causes muffling on desktop Chrome
     let audioCtx = null;
     if (isSafariIOS) {
       try {
@@ -46,6 +106,8 @@ export function useTTS() {
 
     try {
       const validToken = await getValidToken();
+      const voiceSettings = slow ? SLOW_VOICE_SETTINGS : getVoiceSettings(dialect, lang);
+
       const res = await fetch(`${WORKER_URL}/api/tts`, {
         method: 'POST',
         headers: {
@@ -55,6 +117,7 @@ export function useTTS() {
         body: JSON.stringify({
           text: clean,
           voice_id: voiceId,
+          voice_settings: voiceSettings,
           ...(lang && lang !== 'ht-HT' ? { language_code: lang.slice(0, 2) } : {}),
         }),
       });
@@ -69,7 +132,6 @@ export function useTTS() {
       const audio = new Audio(audioUrl);
       audio.volume = 1.0;
 
-      // Only use AudioContext gain boost on iOS Safari — it causes muffling on desktop Chrome
       if (isSafariIOS && audioCtx?.state === 'running') {
         try {
           const src = audioCtx.createMediaElementSource(audio);
