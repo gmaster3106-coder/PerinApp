@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import ReactDOM from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext.jsx';
 import { JOURNEY_STAGES } from '../data/journey.js';
@@ -210,7 +211,6 @@ const MISSION_ROUTES = {
   vocabquiz: '/vocab-quiz',
 };
 
-// What to suggest after mission is done — pick something different from the mission type
 const AFTER_MISSION_SUGGESTIONS = [
   { label: '🗺️ Continue your journey', path: 'journey' },
   { label: '✏️ Fill the Blank drill', path: '/fib' },
@@ -261,7 +261,6 @@ function DailyMission({ sessions, navigate, nextJourney }) {
   const done = isDailyMissionDone();
   const route = MISSION_ROUTES[mission.type] || '/scenarios';
 
-  // Pick 2 suggestions different from the completed mission type
   const suggestions = AFTER_MISSION_SUGGESTIONS.filter(s => {
     if (s.path === 'journey') return !!nextJourney;
     return !route.includes(s.path.replace('/', ''));
@@ -293,16 +292,8 @@ function DailyMission({ sessions, navigate, nextJourney }) {
           </div>
           <div style={{ display: 'flex', gap: '8px' }}>
             {suggestions.map((s, i) => (
-              <button
-                key={i}
-                onClick={() => s.path === 'journey' ? navigate('/journey') : navigate(s.path)}
-                style={{
-                  flex: 1, background: 'var(--cream)', border: '1.5px solid var(--border)',
-                  borderRadius: '10px', padding: '8px 10px', fontFamily: "'DM Sans',sans-serif",
-                  fontSize: '.78rem', fontWeight: '600', color: 'var(--ink)', cursor: 'pointer',
-                  textAlign: 'center', transition: 'all .15s',
-                }}
-              >
+              <button key={i} onClick={() => s.path === 'journey' ? navigate('/journey') : navigate(s.path)}
+                style={{ flex: 1, background: 'var(--cream)', border: '1.5px solid var(--border)', borderRadius: '10px', padding: '8px 10px', fontFamily: "'DM Sans',sans-serif", fontSize: '.78rem', fontWeight: '600', color: 'var(--ink)', cursor: 'pointer', textAlign: 'center', transition: 'all .15s' }}>
                 {s.label}
               </button>
             ))}
@@ -317,12 +308,10 @@ function getScenarioRevisitSuggestion(lang, dialect) {
   try {
     const completed = JSON.parse(localStorage.getItem('perin_completed') || '{}');
     const playCounts = JSON.parse(localStorage.getItem(`perin_play_counts_${lang}_${dialect}`) || '{}');
-    // Find completed scenarios played <=2 times — worth revisiting
     const candidates = Object.entries(completed)
       .filter(([key, val]) => {
         if (!val) return false;
         const parts = key.split('_');
-        // key format: lang_dialect_level_idx
         return parts[0] === lang && parts[1] === dialect;
       })
       .map(([key]) => {
@@ -335,7 +324,6 @@ function getScenarioRevisitSuggestion(lang, dialect) {
       })
       .filter(c => c.scenario && c.playCount <= 2);
     if (!candidates.length) return null;
-    // Rotate daily
     const seed = new Date().toDateString() + lang + dialect;
     let hash = 0;
     for (const ch of seed) hash = (hash * 31 + ch.charCodeAt(0)) & 0xffffffff;
@@ -353,11 +341,12 @@ function CultureCard({ dialect, lang }) {
         <span style={{ fontSize: '1.8rem', flexShrink: 0 }}>{fact.emoji}</span>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: '.6rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--accent)', marginBottom: '3px' }}>
-              Daily Culture · {dialect !== lang ? dialect : lang}
-            </div>
+            Daily Culture · {dialect !== lang ? dialect : lang}
+          </div>
           <div style={{ fontSize: '.88rem', fontWeight: '700', color: 'var(--ink)', lineHeight: '1.3' }}>{fact.headline}</div>
         </div>
-        <span style={{ color: 'var(--muted)', fontSize: '1rem', flexShrink: 0, transition: 'transform .2s', transform: expanded ? 'rotate(90deg)' : 'none' }}>›</span>
+        {/* Use a span without transform to avoid fixed positioning issues */}
+        <span style={{ color: 'var(--muted)', fontSize: '1rem', flexShrink: 0 }}>{expanded ? '↓' : '›'}</span>
       </div>
       {expanded && (
         <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid var(--border)' }}>
@@ -377,9 +366,9 @@ function CulturalOnboardingModal({ dialect, lang, onClose }) {
   const highlights = facts.slice(0, 3);
   const dialectLabel = dialect !== lang ? dialect : lang;
 
-  return (
+  return ReactDOM.createPortal(
     <div style={{
-      position: 'fixed', inset: 0, background: 'rgba(0,0,0,.55)', zIndex: 200,
+      position: 'fixed', inset: 0, background: 'rgba(0,0,0,.55)', zIndex: 9999,
       display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
     }}>
       <div style={{
@@ -387,9 +376,7 @@ function CulturalOnboardingModal({ dialect, lang, onClose }) {
         width: '100%', maxWidth: '600px', maxHeight: '80vh', overflowY: 'auto',
       }}>
         <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-          <div style={{ fontSize: '2.5rem', marginBottom: '10px' }}>
-            {facts[0]?.emoji || '🌍'}
-          </div>
+          <div style={{ fontSize: '2.5rem', marginBottom: '10px' }}>{facts[0]?.emoji || '🌍'}</div>
           <div style={{ fontFamily: "'Playfair Display',serif", fontSize: '1.3rem', fontWeight: '700', marginBottom: '6px' }}>
             Welcome to {dialectLabel}
           </div>
@@ -397,38 +384,23 @@ function CulturalOnboardingModal({ dialect, lang, onClose }) {
             A few things that'll help your conversations feel natural from day one.
           </p>
         </div>
-
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '20px' }}>
           {highlights.map((fact, i) => (
-            <div key={i} style={{
-              background: 'var(--cream)', borderRadius: '12px', padding: '14px 16px',
-              display: 'flex', gap: '12px', alignItems: 'flex-start',
-            }}>
+            <div key={i} style={{ background: 'var(--cream)', borderRadius: '12px', padding: '14px 16px', display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
               <span style={{ fontSize: '1.5rem', flexShrink: 0 }}>{fact.emoji}</span>
               <div>
-                <div style={{ fontSize: '.85rem', fontWeight: '700', color: 'var(--ink)', marginBottom: '4px' }}>
-                  {fact.headline}
-                </div>
-                <div style={{ fontSize: '.76rem', color: 'var(--muted)', lineHeight: 1.5 }}>
-                  {fact.tip}
-                </div>
+                <div style={{ fontSize: '.85rem', fontWeight: '700', color: 'var(--ink)', marginBottom: '4px' }}>{fact.headline}</div>
+                <div style={{ fontSize: '.76rem', color: 'var(--muted)', lineHeight: 1.5 }}>{fact.tip}</div>
               </div>
             </div>
           ))}
         </div>
-
-        <button
-          onClick={onClose}
-          style={{
-            width: '100%', background: 'var(--accent)', color: '#fff', border: 'none',
-            borderRadius: '14px', padding: '14px', fontFamily: "'DM Sans',sans-serif",
-            fontSize: '.95rem', fontWeight: '700', cursor: 'pointer',
-          }}
-        >
+        <button onClick={onClose} style={{ width: '100%', background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: '14px', padding: '14px', fontFamily: "'DM Sans',sans-serif", fontSize: '.95rem', fontWeight: '700', cursor: 'pointer' }}>
           Let's start →
         </button>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -482,7 +454,6 @@ export default function Dashboard() {
     const updated = [...languages, newLang];
     dispatch({ type: 'SET_LANGUAGES', payload: updated });
     dispatch({ type: 'SET_ACTIVE_LANG', payload: newLang });
-    // Show cultural onboarding if facts exist for this dialect
     const d = newLang.dialect || newLang.lang;
     const l = newLang.lang;
     if (getFactsForDialect(d, l)) {
@@ -498,13 +469,13 @@ export default function Dashboard() {
   return (
     <div className="screen active" id="screen-setup">
       {onboarding && (
-          <CulturalOnboardingModal
-            dialect={onboarding.dialect}
-            lang={onboarding.lang}
-            onClose={() => setOnboarding(null)}
-          />
-        )}
-        <div style={{ width: '100%', maxWidth: '600px' }}>
+        <CulturalOnboardingModal
+          dialect={onboarding.dialect}
+          lang={onboarding.lang}
+          onClose={() => setOnboarding(null)}
+        />
+      )}
+      <div style={{ width: '100%', maxWidth: '600px' }}>
 
         <div className="dash-top">
           <div>
@@ -514,7 +485,6 @@ export default function Dashboard() {
           {lang && <DailyRing goal={activeLang?.dailyGoal || 30} />}
         </div>
 
-        {/* Streak at-risk warning */}
         {lang && (() => {
           const streak = profile?.streak || 0;
           const lastDate = profile?.lastDate || '';
@@ -534,7 +504,6 @@ export default function Dashboard() {
           );
         })()}
 
-        {/* Level-up nudge after many sessions at same level */}
         {lang && (() => {
           const sessions = profile?.sessions || 0;
           const level = activeLang?.level || 'beginner';
@@ -557,27 +526,14 @@ export default function Dashboard() {
           );
         })()}
 
-                {unlockedBanner && (
-          <div style={{
-            background: 'linear-gradient(135deg,#fef3c7,#fde68a)', border: '1.5px solid #f59e0b',
-            borderRadius: '14px', padding: '12px 16px', marginBottom: '10px',
-            display: 'flex', alignItems: 'center', gap: '12px',
-          }}>
+        {unlockedBanner && (
+          <div style={{ background: 'linear-gradient(135deg,#fef3c7,#fde68a)', border: '1.5px solid #f59e0b', borderRadius: '14px', padding: '12px 16px', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '12px' }}>
             <span style={{ fontSize: '1.6rem' }}>🎉</span>
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: '.68rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '.1em', color: '#92400e', marginBottom: '2px' }}>
-                New stage unlocked
-              </div>
-              <div style={{ fontSize: '.9rem', fontWeight: '700', color: '#78350f' }}>
-                {unlockedBanner.stage?.label}
-              </div>
+              <div style={{ fontSize: '.68rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '.1em', color: '#92400e', marginBottom: '2px' }}>New stage unlocked</div>
+              <div style={{ fontSize: '.9rem', fontWeight: '700', color: '#78350f' }}>{unlockedBanner.stage?.label}</div>
             </div>
-            <button
-              onClick={dismissUnlockedBanner}
-              style={{ background: 'none', border: 'none', fontSize: '1.1rem', cursor: 'pointer', color: '#92400e', padding: '4px' }}
-            >
-              ✕
-            </button>
+            <button onClick={dismissUnlockedBanner} style={{ background: 'none', border: 'none', fontSize: '1.1rem', cursor: 'pointer', color: '#92400e', padding: '4px' }}>✕</button>
           </div>
         )}
 
@@ -609,23 +565,14 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Scenario revisit suggestion */}
         {revisit && revisit.scenario && (
-          <div
-            onClick={() => navigate('/wordprep', { state: { scenario: revisit.scenario, level: revisit.level, idx: revisit.idx, lang, dialect } })}
-            style={{ background: 'var(--card)', border: '1.5px solid var(--border)', borderRadius: '14px', padding: '12px 16px', marginBottom: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '12px' }}
-          >
+          <div onClick={() => navigate('/wordprep', { state: { scenario: revisit.scenario, level: revisit.level, idx: revisit.idx, lang, dialect } })}
+            style={{ background: 'var(--card)', border: '1.5px solid var(--border)', borderRadius: '14px', padding: '12px 16px', marginBottom: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '12px' }}>
             <span style={{ fontSize: '1.4rem', flexShrink: 0 }}>{revisit.scenario.icon || '🔁'}</span>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: '.62rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--muted)', marginBottom: '2px' }}>
-                🔁 Worth revisiting
-              </div>
-              <div style={{ fontSize: '.88rem', fontWeight: '700', color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {revisit.scenario.title}
-              </div>
-              <div style={{ fontSize: '.72rem', color: 'var(--muted)', marginTop: '1px' }}>
-                You've only done this once — try it again
-              </div>
+              <div style={{ fontSize: '.62rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--muted)', marginBottom: '2px' }}>🔁 Worth revisiting</div>
+              <div style={{ fontSize: '.88rem', fontWeight: '700', color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{revisit.scenario.title}</div>
+              <div style={{ fontSize: '.72rem', color: 'var(--muted)', marginTop: '1px' }}>You've only done this once — try it again</div>
             </div>
             <span style={{ color: 'var(--muted)', fontSize: '1.1rem', flexShrink: 0 }}>›</span>
           </div>
@@ -654,53 +601,28 @@ export default function Dashboard() {
 
         <div className="dash-mode-list">
           <button className="dash-mode-row" onClick={() => navigate('/scenes')}>
-            <span className="dmr-icon">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="2"/><path d="m7 2 0 20M17 2v20M2 12h20M2 7h5m10 0h5M2 17h5m10 0h5"/></svg>
-            </span>
-            <div className="dmr-text">
-              <div className="dmr-label">Scene Mode</div>
-              <div className="dmr-sub">Story-driven scenes with emotional stakes — an argument, a job interview, a first date</div>
-            </div>
+            <span className="dmr-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="2"/><path d="m7 2 0 20M17 2v20M2 12h20M2 7h5m10 0h5M2 17h5m10 0h5"/></svg></span>
+            <div className="dmr-text"><div className="dmr-label">Scene Mode</div><div className="dmr-sub">Story-driven scenes with emotional stakes — an argument, a job interview, a first date</div></div>
             <span className="dmr-arrow">›</span>
           </button>
           <button className="dash-mode-row" onClick={() => navigate('/pressure')} style={{ borderColor: 'rgba(239,68,68,.25)' }}>
-            <span className="dmr-icon" style={{ color: '#ef4444' }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
-            </span>
-            <div className="dmr-text">
-              <div className="dmr-label">Live Conversation <span style={{ fontSize: '.6rem', background: 'rgba(239,68,68,.15)', color: '#ef4444', borderRadius: '4px', padding: '1px 5px', verticalAlign: 'middle', marginLeft: '4px' }}>BETA</span></div>
-              <div className="dmr-sub">AI speaks first, you react in real time — no script</div>
-            </div>
+            <span className="dmr-icon" style={{ color: '#ef4444' }}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg></span>
+            <div className="dmr-text"><div className="dmr-label">Live Conversation <span style={{ fontSize: '.6rem', background: 'rgba(239,68,68,.15)', color: '#ef4444', borderRadius: '4px', padding: '1px 5px', verticalAlign: 'middle', marginLeft: '4px' }}>BETA</span></div><div className="dmr-sub">AI speaks first, you react in real time — no script</div></div>
             <span className="dmr-arrow" style={{ color: '#ef4444' }}>›</span>
           </button>
           <button className="dash-mode-row" onClick={() => navigate('/srs')}>
-            <span className="dmr-icon">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><circle cx="12" cy="10" r="1"/><circle cx="8" cy="10" r="1"/><circle cx="16" cy="10" r="1"/></svg>
-            </span>
-            <div className="dmr-text">
-              <div className="dmr-label">My Words</div>
-              <div className="dmr-sub">Your saved vocabulary and session phrases — review with spaced repetition</div>
-            </div>
+            <span className="dmr-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><circle cx="12" cy="10" r="1"/><circle cx="8" cy="10" r="1"/><circle cx="16" cy="10" r="1"/></svg></span>
+            <div className="dmr-text"><div className="dmr-label">My Words</div><div className="dmr-sub">Your saved vocabulary and session phrases — review with spaced repetition</div></div>
             <span className="dmr-arrow">›</span>
           </button>
           <button className="dash-mode-row" onClick={() => navigate('/chat', { state: { mode: 'freechat', lang, dialect } })}>
-            <span className="dmr-icon">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-            </span>
-            <div className="dmr-text">
-              <div className="dmr-label">Free Chat</div>
-              <div className="dmr-sub">Open conversation on any topic — no scenario, no goal, just talk</div>
-            </div>
+            <span className="dmr-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
+            <div className="dmr-text"><div className="dmr-label">Free Chat</div><div className="dmr-sub">Open conversation on any topic — no scenario, no goal, just talk</div></div>
             <span className="dmr-arrow">›</span>
           </button>
           <button className="dash-mode-row" onClick={() => navigate('/listening')}>
-            <span className="dmr-icon">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>
-            </span>
-            <div className="dmr-text">
-              <div className="dmr-label">Listen &amp; Respond</div>
-              <div className="dmr-sub">A native speaker says something — you transcribe it. Trains your ear for real-speed speech</div>
-            </div>
+            <span className="dmr-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg></span>
+            <div className="dmr-text"><div className="dmr-label">Listen &amp; Respond</div><div className="dmr-sub">A native speaker says something — you transcribe it. Trains your ear for real-speed speech</div></div>
             <span className="dmr-arrow">›</span>
           </button>
         </div>
