@@ -69,9 +69,16 @@ export default function Onboarding() {
       level: 'beginner', xp: 0, sessions: 0, history: [],
       dailyGoal: goal,
     };
-    dispatch({ type: 'SET_PROFILE', payload: { native } });
+    const newProfile = { native };
+    dispatch({ type: 'SET_PROFILE', payload: newProfile });
     dispatch({ type: 'SET_LANGUAGES', payload: [newLang] });
     dispatch({ type: 'SET_ACTIVE_LANG', payload: newLang });
+    // Force-save to localStorage immediately since user is now logged in
+    try {
+      const existing = JSON.parse(localStorage.getItem('perin_profile') || '{}');
+      localStorage.setItem('perin_profile', JSON.stringify({ ...existing, ...newProfile }));
+      localStorage.setItem('perin_languages', JSON.stringify([newLang]));
+    } catch { /* silent */ }
     navigate('/dashboard');
   }
 
