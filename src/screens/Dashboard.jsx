@@ -366,14 +366,25 @@ function CulturalOnboardingModal({ dialect, lang, onClose }) {
   const highlights = facts.slice(0, 3);
   const dialectLabel = dialect !== lang ? dialect : lang;
 
+  React.useEffect(() => {
+    const prev = document.documentElement.style.overflow;
+    document.documentElement.style.overflow = 'hidden';
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.documentElement.style.overflow = prev;
+      document.body.style.overflow = '';
+    };
+  }, []);
+
   return ReactDOM.createPortal(
     <div style={{
-      position: 'fixed', inset: 0, background: 'rgba(0,0,0,.55)', zIndex: 9999,
+      position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh',
+      background: 'rgba(0,0,0,.55)', zIndex: 9999,
       display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
     }}>
       <div style={{
         background: 'var(--card)', borderRadius: '20px 20px 0 0', padding: '24px 20px 40px',
-        width: '100%', maxWidth: '600px', maxHeight: '80vh', overflowY: 'auto',
+        width: '100vw', maxHeight: '85vh', overflowY: 'auto',
       }}>
         <div style={{ textAlign: 'center', marginBottom: '20px' }}>
           <div style={{ fontSize: '2.5rem', marginBottom: '10px' }}>{facts[0]?.emoji || '🌍'}</div>
