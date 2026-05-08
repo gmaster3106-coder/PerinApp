@@ -20,7 +20,6 @@ function getVocabCount() {
   try { return JSON.parse(localStorage.getItem('perin_vocab') || '[]').length; } catch { return 0; }
 }
 
-// Only mark mission done if it's a chat-type mission
 function markMissionDoneIfChat() {
   try {
     const key = 'perin_mission_' + new Date().toDateString();
@@ -53,16 +52,19 @@ export default function SessionSummary() {
 
   const profile    = state.profile || {};
   const streak     = profile.streak || 0;
-  const totalXP    = (profile.xp || 0) + xpEarned;
-  const level_num  = Math.floor(totalXP / 100) + 1;
+  const prevXP     = profile.xp || 0;
+  const totalXP    = prevXP + xpEarned;
+  const prevLevel  = Math.floor(prevXP / 100) + 1;
+  const newLevel   = Math.floor(totalXP / 100) + 1;
+  const didLevelUp = newLevel > prevLevel;
   const vocabCount = getVocabCount();
   const dialectLabel = dialect && dialect !== lang ? `${dialect} ${lang}` : lang;
   const scenarioLabel = scenario?.title || '';
 
   const [recapPhrases, setRecapPhrases] = useState(null);
   const [savedWords, setSavedWords] = useState({});
+  const [showLevelUp, setShowLevelUp] = useState(false);
 
-  // Award XP, record streak activity, mark mission done, mark scenario complete — only once per session
   useEffect(() => {
     const summaryKey = `perin_summary_${xpEarned}_${messages}`;
     const alreadyAwarded = sessionStorage.getItem(summaryKey);
@@ -70,14 +72,8 @@ export default function SessionSummary() {
       sessionStorage.setItem(summaryKey, '1');
       if (xpEarned > 0) dispatch({ type: 'AWARD_XP', payload: xpEarned });
       dispatch({ type: 'CHECK_STREAK' });
-
-      // Record activity for streak tracking
       recordActivity();
-
-      // Only mark mission done if today's mission is a chat-type
       markMissionDoneIfChat();
-
-      // Mark scenario as completed in journey
       if (level && idx !== null) {
         try {
           const completed = JSON.parse(localStorage.getItem('perin_completed') || '{}');
@@ -85,10 +81,10 @@ export default function SessionSummary() {
           localStorage.setItem('perin_completed', JSON.stringify(completed));
         } catch { /* silent */ }
       }
+      if (didLevelUp) setTimeout(() => setShowLevelUp(true), 800);
     }
   }, []);
 
-  // Generate AI recap in background
   useEffect(() => {
     if (history.length < 4) return;
     generateRecap();
@@ -111,18 +107,17 @@ export default function SessionSummary() {
           max_tokens: 400,
           messages: [{
             role: 'user',
-            content: `You are a language learning analyst. Review this ${dialectLabel} conversation and identify the 3-5 most valuable vocabulary items for the learner.
+            content: `You are a language learning analyst. Review this ${dialectLabel} conversation transcript and extract 3-5 key phrases or words that ACTUALLY APPEAR in the native speaker's messages.
 
-PRIORITY ORDER:
-1. ${dialect || lang}-specific slang, expressions, or idioms not in standard ${lang} textbooks
-2. Regional vocabulary unique to ${dialect || lang} speakers
-3. Culturally specific phrases that reveal how ${dialect || lang} speakers actually talk
-4. High-frequency phrases the learner struggled with or could improve
+STRICT RULES:
+- Only include words/phrases that appear verbatim in the transcript below
+- Prioritize ${dialect || lang}-specific slang, contractions, or expressions
+- Do NOT invent phrases not in the transcript
 
-Return ONLY valid JSON, no markdown, no preamble:
+Return ONLY valid JSON, no markdown:
 {"phrases":[{"word":"...","meaning":"...","note":"one line — why this is specific to ${dialect || lang}"}]}
 
-Conversation:
+Transcript:
 ${transcript}`,
           }],
         }),
@@ -145,6 +140,24 @@ ${transcript}`,
     <div className="screen active" id="screen-summary" style={{ alignItems: 'center', padding: '28px 16px 60px', overflowY: 'auto' }}>
       <div style={{ width: '100%', maxWidth: 480 }}>
 
+        {/* Level up banner */}
+        {showLevelUp && (
+          <div style={{
+            background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+            borderRadius: 16, padding: '16px 20px', marginBottom: 20,
+            textAlign: 'center', color: '#fff',
+            animation: 'fadeIn .4s ease',
+          }}>
+            <div style={{ fontSize: '2rem', marginBottom: 6 }}>🏆</div>
+            <div style={{ fontFamily: "'Playfair Display',serif", fontSize: '1.2rem', fontWeight: 700 }}>
+              Level {newLevel} unlocked!
+            </div>
+            <div style={{ fontSize: '.82rem', opacity: .85, marginTop: 4 }}>
+              You've reached level {newLevel} in {dialectLabel}. Keep going!
+            </div>
+          </div>
+        )}
+
         {/* Hero */}
         <div style={{ textAlign: 'center', padding: '8px 0 20px' }}>
           <div style={{ fontSize: '3rem', marginBottom: 10 }}>🎉</div>
@@ -157,12 +170,11 @@ ${transcript}`,
             </p>
           )}
 
-          {/* XP earned */}
           <div style={{ background: 'linear-gradient(135deg, var(--accent), #1a3a6b)', borderRadius: 16, padding: '18px 24px', margin: '20px 0', color: '#fff' }}>
             <div style={{ fontSize: '2.8rem', fontWeight: 800, lineHeight: 1 }}>+{xpEarned}</div>
             <div style={{ fontSize: '.85rem', opacity: .8, marginTop: 4 }}>XP earned</div>
             <div style={{ fontSize: '.75rem', opacity: .6, marginTop: 6 }}>
-              Level {level_num} · {totalXP} XP total
+              Level {newLevel} · {totalXP} XP total
             </div>
             {streak > 1 && (
               <div style={{ fontSize: '.82rem', color: '#fbbf24', marginTop: 6 }}>
@@ -239,10 +251,8 @@ ${transcript}`,
             What to do next
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <button
-              onClick={() => navigate('/journey')}
-              style={{ background: 'var(--card)', border: '1.5px solid var(--border)', borderRadius: 12, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', fontFamily: "'DM Sans',sans-serif", width: '100%', textAlign: 'left' }}
-            >
+            <button onClick={() => navigate('/journey')}
+              style={{ background: 'var(--card)', border: '1.5px solid var(--border)', borderRadius: 12, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', fontFamily: "'DM Sans',sans-serif", width: '100%', textAlign: 'left' }}>
               <span style={{ fontSize: '1.2rem' }}>🗺️</span>
               <div>
                 <div style={{ fontSize: '.88rem', fontWeight: 600, color: 'var(--ink)' }}>Continue your journey</div>
@@ -250,10 +260,8 @@ ${transcript}`,
               </div>
             </button>
 
-            <button
-              onClick={() => navigate('/scenarios')}
-              style={{ background: 'var(--card)', border: '1.5px solid var(--border)', borderRadius: 12, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', fontFamily: "'DM Sans',sans-serif", width: '100%', textAlign: 'left' }}
-            >
+            <button onClick={() => navigate('/scenarios')}
+              style={{ background: 'var(--card)', border: '1.5px solid var(--border)', borderRadius: 12, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', fontFamily: "'DM Sans',sans-serif", width: '100%', textAlign: 'left' }}>
               <span style={{ fontSize: '1.2rem' }}>🎬</span>
               <div>
                 <div style={{ fontSize: '.88rem', fontWeight: 600, color: 'var(--ink)' }}>Try another scenario</div>
@@ -262,10 +270,8 @@ ${transcript}`,
             </button>
 
             {vocabCount > 0 && (
-              <button
-                onClick={() => navigate('/srs')}
-                style={{ background: 'var(--card)', border: '1.5px solid var(--border)', borderRadius: 12, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', fontFamily: "'DM Sans',sans-serif", width: '100%', textAlign: 'left' }}
-              >
+              <button onClick={() => navigate('/srs')}
+                style={{ background: 'var(--card)', border: '1.5px solid var(--border)', borderRadius: 12, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', fontFamily: "'DM Sans',sans-serif", width: '100%', textAlign: 'left' }}>
                 <span style={{ fontSize: '1.2rem' }}>🔁</span>
                 <div>
                   <div style={{ fontSize: '.88rem', fontWeight: 600, color: 'var(--ink)' }}>Review words you saved</div>
@@ -274,10 +280,8 @@ ${transcript}`,
               </button>
             )}
 
-            <button
-              onClick={() => navigate('/fib')}
-              style={{ background: 'var(--card)', border: '1.5px solid var(--border)', borderRadius: 12, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', fontFamily: "'DM Sans',sans-serif", width: '100%', textAlign: 'left' }}
-            >
+            <button onClick={() => navigate('/fib')}
+              style={{ background: 'var(--card)', border: '1.5px solid var(--border)', borderRadius: 12, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', fontFamily: "'DM Sans',sans-serif", width: '100%', textAlign: 'left' }}>
               <span style={{ fontSize: '1.2rem' }}>✏️</span>
               <div>
                 <div style={{ fontSize: '.88rem', fontWeight: 600, color: 'var(--ink)' }}>Fill the Blank drill</div>
