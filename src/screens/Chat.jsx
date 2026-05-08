@@ -263,7 +263,8 @@ function ChipBar({ chips, lang, onSave }) {
 
 function stripAsteriskActions(text) {
   return (text || '')
-    .replace(/\*[^*\n]+\*/g, '')
+    .replace(/\*\*[^*]+\*\*/g, '')   // strip **bold**
+    .replace(/\*[^*\n]+\*/g, '')       // strip *italic/action*
     .replace(/\(\s*\)/g, '')
     .replace(/\[\s*\]/g, '')
     .replace(/[ \t]{2,}/g, ' ')
