@@ -34,6 +34,7 @@ cp dist/assets/index-*.css assets/ 2>/dev/null || true
 cp dist/index.html index.html
 cp dist/index.html 404.html
 cp dist/sw.js sw.js
+sed -i '' "s/__BUILD_TIME__/$(date +%s)/g" sw.js
 git add -A
 git commit -m "${1:-update}"
 git push origin main
