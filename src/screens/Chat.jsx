@@ -105,7 +105,7 @@ function getBasePrompt(nativeLang) {
   return `You are a native speaker having a real conversation. Speak in the target language; keep meta-communication in ${nativeLang}.
 
 RULES:
-1. Target language for conversation, ${nativeLang} for corrections/hints only.
+1. Speak ONLY in the target language. Use ${nativeLang} ONLY for one-line corrections or when learner is completely lost. Never explain or narrate in ${nativeLang}.
 2. Use authentic dialect slang and regional expressions naturally.
 3. Keep replies SHORT: 1-3 sentences max.
 4. Correct mistakes warmly in ${nativeLang}. When correcting, briefly explain WHY — e.g. "Say 'estás' not 'eres' — use estar for temporary states like feelings." Keep explanations to one sentence. Don't correct every small error; focus on patterns that will help most.
@@ -263,8 +263,10 @@ function ChipBar({ chips, lang, onSave }) {
 
 function stripAsteriskActions(text) {
   return (text || '')
-    .replace(/\*\*[^*]+\*\*/g, '')   // strip **bold**
-    .replace(/\*[^*\n]+\*/g, '')       // strip *italic/action*
+    .replace(/\*\*[^*\n]*\*\*/g, '')  // strip **bold**
+    .replace(/\*\*[^*\n]*/g, '')         // strip unclosed **
+    .replace(/\*[^*\n]+\*/g, '')         // strip *italic/action*
+    .replace(/\d+\.\s*—/g, '—')         // clean "1. —" list artifacts
     .replace(/\(\s*\)/g, '')
     .replace(/\[\s*\]/g, '')
     .replace(/[ \t]{2,}/g, ' ')
@@ -694,7 +696,7 @@ RULES:
     abortRef.current?.abort();
     const duration = Math.round((Date.now() - sessionStartRef.current) / 60000);
     const msgCount = historyRef.current.filter(m => m.role === 'user').length;
-    if (msgCount < 1) { navigate('/dashboard'); return; }
+    if (msgCount < 3) { navigate('/dashboard'); return; }
 
     const used = state.subscription?.conversations_used || 0;
     dispatch({ type: 'SET_SUBSCRIPTION', payload: { ...state.subscription, conversations_used: used + 1 } });
