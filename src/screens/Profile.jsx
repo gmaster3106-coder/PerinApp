@@ -12,7 +12,7 @@ const GOALS = [
 export default function Profile() {
   const { state, dispatch } = useApp();
   const navigate = useNavigate();
-  const isNewUser = !state.profile?.name;
+  const isNewUser = !state.currentUser?.access_token;
 
   const [name, setName] = useState(state.profile?.name || '');
   const [motivation, setMotivation] = useState(state.profile?.motivation || '');
