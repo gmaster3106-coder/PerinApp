@@ -662,7 +662,7 @@ export default function Dashboard() {
           </div>
         )}
 
-        {languages.length >= 2 && <ConnectionsPanel languages={languages} />}
+        
 
       </div>
     </div>
