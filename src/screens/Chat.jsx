@@ -37,8 +37,8 @@ function getCultureTip(dialect, lang, scenarioTitle) {
   const ruleSentence = sentences.find(hasRule);
   if (ruleSentence) return ruleSentence.trim();
 
-  const result = sentences[sentences.length - 1].trim();
-  return result.replace(/\*+/g, '').replace(/\s{2,}/g, ' ').trim();
+  // No sentence meets the quality bar — show nothing rather than a weak tip
+  return null;
 }
 
 function CultureTipBanner({ dialect, lang, scenarioTitle, onDismiss }) {
