@@ -66,12 +66,28 @@ export default function FillBlank() {
 
   const typeInputRef = useRef(null);
 
-  const generate = useCallback(async () => {
+  const generate = useCallback(async (forceRefresh = false) => {
     setPhase('loading');
     setQuestions([]);
     setIndex(0);
     setScore(0);
     setMissed([]);
+
+    // Check cache first (per dialect per day)
+    const cacheKey = `perin_fib_${dialect}_${new Date().toDateString()}`;
+    if (!forceRefresh) {
+      try {
+        const cached = localStorage.getItem(cacheKey);
+        if (cached) {
+          const qs = JSON.parse(cached);
+          if (qs.length) {
+            setQuestions(qs.map(q => q.type === 'tap' ? { ...q, options: shuffle(q.options) } : q));
+            setPhase('question');
+            return;
+          }
+        }
+      } catch { /* fall through to generate */ }
+    }
 
     const vocabHint = savedVocab.length
       ? ` Include these words when natural: ${savedVocab.join(', ')}.` : '';
@@ -89,7 +105,7 @@ Make sentences authentic ${dialect} ${lang} — use vocabulary and situations re
         method: 'POST',
         headers,
         body: JSON.stringify({
-          model: 'claude-sonnet-4-5',
+          model: 'claude-haiku-4-5-20251001',
           max_tokens: 2000,
           messages: [{ role: 'user', content: prompt }],
         }),
@@ -105,6 +121,9 @@ Make sentences authentic ${dialect} ${lang} — use vocabulary and situations re
       const parsed = JSON.parse(match[0]);
       const qs = parsed.questions || [];
       if (!qs.length) throw new Error('Empty questions array');
+
+      // Cache for the day
+      try { localStorage.setItem(cacheKey, JSON.stringify(qs)); } catch { /* quota */ }
 
       setQuestions(qs.map(q => q.type === 'tap' ? { ...q, options: shuffle(q.options) } : q));
       setPhase('question');
@@ -186,11 +205,11 @@ Make sentences authentic ${dialect} ${lang} — use vocabulary and situations re
   }
 
   if (phase === 'loading') return <LoadingView />;
-  if (phase === 'error')   return <ErrorView onRetry={generate} />;
+  if (phase === 'error')   return <ErrorView onRetry={() => generate(true)} />;
   if (phase === 'score')   return (
     <ScoreView
       score={score} total={questions.length} missed={missed}
-      onNewSet={generate}
+      onNewSet={() => generate(true)}
       onDashboard={() => navigate('/dashboard')}
       onSentenceBuilder={() => navigate('/sentence-builder')}
     />
