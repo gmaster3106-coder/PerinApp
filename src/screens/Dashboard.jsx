@@ -673,13 +673,13 @@ export default function Dashboard() {
             </div>
             <span className="dmr-arrow" style={{ color: '#ef4444' }}>›</span>
           </button>
-          <button className="dash-mode-row" onClick={() => navigate('/memory')}>
+          <button className="dash-mode-row" onClick={() => navigate('/srs')}>
             <span className="dmr-icon">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><circle cx="12" cy="10" r="1"/><circle cx="8" cy="10" r="1"/><circle cx="16" cy="10" r="1"/></svg>
             </span>
             <div className="dmr-text">
-              <div className="dmr-label">My Moments</div>
-              <div className="dmr-sub">Words you struggled with, brought back in context — your personal spaced repetition</div>
+              <div className="dmr-label">My Words</div>
+              <div className="dmr-sub">Your saved vocabulary and session phrases — review with spaced repetition</div>
             </div>
             <span className="dmr-arrow">›</span>
           </button>
