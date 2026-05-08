@@ -515,6 +515,34 @@ export default function Dashboard() {
           );
         })()}
 
+        {/* Streak freeze card — show when user has a streak and freezes */}
+        {lang && (() => {
+          const streak = profile?.streak || 0;
+          const freezes = profile?.streakFreezes || 0;
+          if (streak < 3) return null;
+          return (
+            <div style={{ background: 'var(--card)', border: '1.5px solid var(--border)', borderRadius: '14px', padding: '12px 16px', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <span style={{ fontSize: '1.5rem' }}>🛡️</span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: '.78rem', fontWeight: '700', color: 'var(--ink)' }}>
+                  Streak Freezes · <span style={{ color: freezes > 0 ? '#22c55e' : 'var(--muted)' }}>{freezes} available</span>
+                </div>
+                <div style={{ fontSize: '.72rem', color: 'var(--muted)', marginTop: 2 }}>
+                  {freezes > 0
+                    ? 'A freeze protects your streak if you miss a day.'
+                    : 'Complete 7 sessions to earn a freeze.'}
+                </div>
+              </div>
+              {freezes === 0 && (
+                <div style={{ fontSize: '.65rem', color: 'var(--muted)', textAlign: 'center', flexShrink: 0 }}>
+                  <div style={{ fontWeight: 700, color: 'var(--accent)' }}>{Math.min((profile?.sessions || 0) % 7, 7)}/7</div>
+                  <div>sessions</div>
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
         {lang && (() => {
           const sessions = profile?.sessions || 0;
           const level = activeLang?.level || 'beginner';
@@ -662,7 +690,7 @@ export default function Dashboard() {
           </div>
         )}
 
-        
+        {languages.length >= 2 && <ConnectionsPanel languages={languages} />}
 
       </div>
     </div>

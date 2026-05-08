@@ -31,6 +31,7 @@ import Connections from './screens/Connections.jsx';
 import SessionSummary from './screens/SessionSummary.jsx';
 import SessionHistory from './screens/SessionHistory.jsx';
 import Paywall from './screens/Paywall.jsx';
+import CrashLogs from './screens/CrashLogs.jsx';
 
 const HIDE_HEADER_PATHS = new Set([
   '/chat', '/pressure', '/intro', '/welcome', '/onboarding', '/profile', '/summary', '/paywall',
@@ -64,7 +65,6 @@ function AppShell() {
     };
   }, [unlockAudio]);
 
-  // Root redirect — runs once on mount
   useEffect(() => {
     const path = location.pathname;
     const isRoot = path === '/' || path === '/PerinApp' || path === '/PerinApp/';
@@ -78,7 +78,6 @@ function AppShell() {
     }
   }, []);
 
-  // Auth guard — redirect to welcome if not logged in and on a protected route
   useEffect(() => {
     const path = location.pathname;
     const isRoot = path === '/' || path === '/PerinApp' || path === '/PerinApp/';
@@ -119,6 +118,7 @@ function AppShell() {
           <Route path="/scenes" element={<Scenes />} />
           <Route path="/friends" element={<Friends />} />
           <Route path="/connections" element={<Connections />} />
+          <Route path="/crash-logs" element={<CrashLogs />} />
           <Route path="*" element={<Dashboard />} />
         </Routes>
       </main>

@@ -306,6 +306,25 @@ export default {
       }
     }
 
+    // ── CRASH LOGS (admin only) ──
+    if (url.pathname === '/api/crash-logs') {
+      if (!userId) return corsResponse(JSON.stringify({ error: 'Unauthorized' }), 401, origin);
+      const ADMIN_IDS = (env.ADMIN_USER_IDS || '').split(',').map(s => s.trim()).filter(Boolean);
+      if (!ADMIN_IDS.includes(userId)) return corsResponse(JSON.stringify({ error: 'Forbidden' }), 403, origin);
+      try {
+        const list = await env.RATE_LIMIT.list({ prefix: 'crash_log:', limit: 50 });
+        const logs = await Promise.all(
+          list.keys.map(async k => {
+            const val = await env.RATE_LIMIT.get(k.name);
+            try { return JSON.parse(val); } catch { return null; }
+          })
+        );
+        return corsResponse(JSON.stringify({ logs: logs.filter(Boolean).reverse() }), 200, origin);
+      } catch (e) {
+        return corsResponse(JSON.stringify({ error: e.message }), 500, origin);
+      }
+    }
+
     if (url.pathname === '/api/stt') {
       if (request.method !== 'POST') return corsResponse(JSON.stringify({ error: 'POST only' }), 405, origin);
       if (!env.OPENAI_KEY) return corsResponse(JSON.stringify({ error: 'Key not configured' }), 500, origin);

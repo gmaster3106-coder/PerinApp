@@ -2,8 +2,10 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext.jsx';
 import { useAuth } from '../hooks/useAuth.js';
-import { ACCENT_THEMES, SUPABASE_URL, SUPABASE_ANON_KEY, WORKER_URL } from '../config/constants.js';
+import { ACCENT_THEMES, WORKER_URL } from '../config/constants.js';
 import { getAvatarColor, getAvatarInitials } from '../utils/avatarUtils.js';
+
+const ADMIN_EMAIL = 'giostthomas@gmail.com';
 
 const PERIN_LS_KEYS = [
   'perin_auth', 'perin_profile', 'perin_languages', 'perin_vocab',
@@ -13,14 +15,12 @@ const PERIN_LS_KEYS = [
 ];
 
 function clearAllPerinData() {
-  // Clear all keys starting with perin_ in one pass
   const keysToRemove = [];
   for (let i = 0; i < localStorage.length; i++) {
     const k = localStorage.key(i);
     if (k && k.startsWith('perin_')) keysToRemove.push(k);
   }
   keysToRemove.forEach(k => localStorage.removeItem(k));
-  // Also clear known keys explicitly as a safety net
   PERIN_LS_KEYS.forEach(k => localStorage.removeItem(k));
 }
 
@@ -34,6 +34,7 @@ export default function Settings() {
   const vocabCount = state.vocab?.length || 0;
   const historyCount = state.history?.length || 0;
   const isLoggedIn = !!state.currentUser?.access_token;
+  const isAdmin = state.currentUser?.email === ADMIN_EMAIL;
 
   const [voicePref, setVoicePref] = useState(
     () => localStorage.getItem('perin_voice_gender_pref') || 'auto'
@@ -66,7 +67,6 @@ export default function Settings() {
       'Delete your account permanently?\n\nThis will erase all your progress, vocab, and data. This cannot be undone.'
     );
     if (!confirmed) return;
-
     const doubleConfirm = window.confirm('Are you absolutely sure? This is permanent.');
     if (!doubleConfirm) return;
 
@@ -74,14 +74,12 @@ export default function Settings() {
     try {
       const token = state.currentUser?.access_token;
       const userId = state.currentUser?.id;
-
       if (token && userId) {
         await fetch(`${WORKER_URL}/api/delete-account`, {
           method: 'POST',
           headers: { 'Authorization': `Bearer ${token}` },
         }).catch(() => {});
       }
-
       clearAllPerinData();
       dispatch({ type: 'SET_PROFILE', payload: null });
       dispatch({ type: 'SET_LANGUAGES', payload: [] });
@@ -290,6 +288,22 @@ export default function Settings() {
             </div>
           </div>
         </div>
+
+        {/* Admin */}
+        {isAdmin && (
+          <div className="settings-section">
+            <div className="settings-section-label">Admin</div>
+            <div className="settings-card">
+              <div className="settings-row clickable" onClick={() => navigate('/crash-logs')}>
+                <div className="settings-row-left">
+                  <div className="settings-row-icon">🪲</div>
+                  <div className="settings-row-text"><strong>Crash Logs</strong><span>Recent client errors</span></div>
+                </div>
+                <div className="settings-row-right"><span className="settings-chevron">›</span></div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* About */}
         <div className="settings-section">

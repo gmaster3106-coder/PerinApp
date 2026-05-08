@@ -8,7 +8,6 @@ function formatDate(iso) {
     const today = new Date();
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
-
     if (d.toDateString() === today.toDateString()) return 'Today';
     if (d.toDateString() === yesterday.toDateString()) return 'Yesterday';
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -37,12 +36,13 @@ export default function SessionHistory() {
 
   const history = state.history || [];
   const [filterLang, setFilterLang] = useState('all');
+  const [search, setSearch] = useState('');
 
   const langs = ['all', ...new Set(history.map(s => s.lang).filter(Boolean))];
 
-  const filtered = filterLang === 'all'
-    ? history
-    : history.filter(s => s.lang === filterLang);
+  const filtered = history
+    .filter(s => filterLang === 'all' || s.lang === filterLang)
+    .filter(s => !search.trim() || (s.scenario || '').toLowerCase().includes(search.trim().toLowerCase()));
 
   const grouped = groupByDate(filtered);
 
@@ -72,7 +72,7 @@ export default function SessionHistory() {
         <Header onBack={() => navigate('/settings')} />
 
         {/* Stats */}
-        <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
+        <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
           {[
             { label: 'Sessions', val: filtered.length },
             { label: 'Messages', val: totalMessages },
@@ -86,6 +86,26 @@ export default function SessionHistory() {
           ))}
         </div>
 
+        {/* Search */}
+        <div style={{ position: 'relative', marginBottom: 12 }}>
+          <input
+            type="text"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search scenarios…"
+            style={{
+              width: '100%', padding: '10px 14px 10px 36px', fontSize: '.88rem',
+              border: '1.5px solid var(--border)', borderRadius: 10,
+              fontFamily: "'DM Sans',sans-serif", background: 'var(--card)',
+              color: 'var(--ink)', boxSizing: 'border-box', outline: 'none',
+            }}
+          />
+          <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)', fontSize: '.9rem' }}>🔍</span>
+          {search && (
+            <button onClick={() => setSearch('')} style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', fontSize: '1rem', padding: 0 }}>✕</button>
+          )}
+        </div>
+
         {/* Language filter */}
         {langs.length > 2 && (
           <div style={{ display: 'flex', gap: 6, marginBottom: 16, flexWrap: 'wrap' }}>
@@ -95,12 +115,18 @@ export default function SessionHistory() {
                 border: `1.5px solid ${filterLang === l ? 'var(--accent)' : 'var(--border)'}`,
                 background: filterLang === l ? 'var(--accent)' : 'var(--card)',
                 color: filterLang === l ? '#fff' : 'var(--muted)',
-                fontFamily: "'DM Sans',sans-serif", fontSize: '.72rem', fontWeight: 600,
-                cursor: 'pointer',
+                fontFamily: "'DM Sans',sans-serif", fontSize: '.72rem', fontWeight: 600, cursor: 'pointer',
               }}>
                 {l === 'all' ? 'All' : l}
               </button>
             ))}
+          </div>
+        )}
+
+        {/* No results */}
+        {filtered.length === 0 && (
+          <div style={{ textAlign: 'center', padding: '32px 20px', color: 'var(--muted)' }}>
+            <p>No sessions match "{search}"</p>
           </div>
         )}
 
@@ -117,9 +143,7 @@ export default function SessionHistory() {
                     <span style={{ fontWeight: 700, fontSize: '.9rem', color: 'var(--ink)' }}>
                       {s.scenario || 'Free Chat'}
                     </span>
-                    <span style={{ fontSize: '.7rem', color: 'var(--accent)', fontWeight: 700 }}>
-                      +{s.xp || 0} XP
-                    </span>
+                    <span style={{ fontSize: '.7rem', color: 'var(--accent)', fontWeight: 700 }}>+{s.xp || 0} XP</span>
                   </div>
                   <div style={{ display: 'flex', gap: 10, fontSize: '.72rem', color: 'var(--muted)' }}>
                     {s.lang && <span>{s.dialect && s.dialect !== s.lang ? `${s.dialect} ${s.lang}` : s.lang}</span>}

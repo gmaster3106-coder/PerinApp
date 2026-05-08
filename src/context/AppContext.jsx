@@ -69,14 +69,27 @@ function reducer(state, action) {
       const last = state.profile.lastDate || '';
       if (last === today) return state;
       const yesterday = new Date(Date.now() - 86400000).toDateString();
-      const newStreak = last === yesterday ? (state.profile.streak || 0) + 1 : 1;
+      const missedDay = last !== yesterday && last !== '';
+      const hasFreeze = (state.profile.streakFreezes || 0) > 0;
+      // Use a freeze if user missed a day but has one available
+      const newStreak = last === yesterday
+        ? (state.profile.streak || 0) + 1
+        : (missedDay && hasFreeze) ? (state.profile.streak || 0) : 1;
+      const newSessions = (state.profile.sessions || 0) + 1;
+      // Consume freeze if used, award new one every 7 sessions
+      const usedFreeze = last !== yesterday && last !== '' && (state.profile.streakFreezes || 0) > 0;
+      const newFreezes = newSessions % 7 === 0
+        ? (state.profile.streakFreezes || 0) + 1
+        : usedFreeze ? (state.profile.streakFreezes || 0) - 1
+        : (state.profile.streakFreezes || 0);
       return {
         ...state,
         profile: {
           ...state.profile,
           streak: newStreak,
           lastDate: today,
-          sessions: (state.profile.sessions || 0) + 1,
+          sessions: newSessions,
+          streakFreezes: newFreezes,
         },
       };
     }
