@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext.jsx';
 import { useTTS } from '../hooks/useTTS.js';
+import { useMic } from '../hooks/useMic.js';
 import { getValidToken } from '../utils/getValidToken.js';
 import { getLangCode } from '../utils/langUtils.js';
 
@@ -44,6 +45,7 @@ export default function ListeningMode() {
   const { state, dispatch } = useApp();
   const navigate = useNavigate();
   const { speak, getVoiceId } = useTTS();
+  const { isRecording, startRecording, stopRecording } = useMic();
 
   const languages  = state.languages || [];
   const activeLang = state.activeLang?.lang ? state.activeLang : languages[0];
@@ -133,6 +135,22 @@ export default function ListeningMode() {
     } finally {
       setPlaying(false);
     }
+  }
+
+  async function handleMic() {
+    if (answered) return;
+    if (isRecording) { stopRecording(); return; }
+    const token = await getValidToken();
+    const q = questions[index];
+    // Pass expected sentence as Whisper hint for high accuracy
+    const hint = q?.sentence || '';
+    startRecording({
+      lang: dialect,
+      accessToken: token,
+      hint,
+      onResult: (t) => setTyped(t),
+      onError: (e) => console.error(e),
+    });
   }
 
   function check() {
@@ -254,7 +272,7 @@ export default function ListeningMode() {
               ref={inputRef}
               className={`fib-type-input${feedback ? (feedback.correct ? ' correct' : ' wrong') : ''}`}
               type="text"
-              placeholder="Type what you heard…"
+              placeholder="Type or speak what you heard…"
               style={{ fontSize: 16 }}
               autoComplete="off"
               value={typed}
@@ -262,8 +280,33 @@ export default function ListeningMode() {
               onKeyDown={e => { if (e.key === 'Enter') check(); }}
               disabled={answered}
             />
+            <button
+              onClick={handleMic}
+              disabled={answered}
+              style={{
+                width: 46, height: 46, borderRadius: '50%', border: 'none', cursor: answered ? 'not-allowed' : 'pointer',
+                background: isRecording ? '#dc2626' : 'var(--cream)',
+                border: `1.5px solid ${isRecording ? '#dc2626' : 'var(--border)'}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                flexShrink: 0, transition: 'all .2s',
+                boxShadow: isRecording ? '0 0 0 6px rgba(220,38,38,.15)' : 'none',
+              }}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={isRecording ? '#fff' : 'var(--muted)'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2" fill="none"/>
+                <line x1="12" y1="19" x2="12" y2="23"/>
+                <line x1="8" y1="23" x2="16" y2="23"/>
+              </svg>
+            </button>
             <button className="fib-submit-btn" onClick={check} disabled={answered}>Check</button>
           </div>
+
+          {isRecording && (
+            <p style={{ fontSize: '.75rem', color: '#dc2626', textAlign: 'center', marginTop: 6 }}>
+              🎙 Listening… speak the sentence
+            </p>
+          )}
 
           {feedback && (
             <div className={`fib-feedback ${feedback.correct ? 'correct' : 'wrong'}`}>
@@ -292,7 +335,7 @@ function Header() {
         🎧 Listen & Respond
       </h2>
       <p style={{ color: 'var(--muted)', fontSize: '.85rem' }}>
-        Hear it. Type what you heard. Trains your ear for real-speed speech.
+        Hear it. Type or speak what you heard. Trains your ear for real-speed speech.
       </p>
     </div>
   );
