@@ -88,7 +88,7 @@ export default function Settings() {
       dispatch({ type: 'SET_ACTIVE_LANG', payload: {} });
       dispatch({ type: 'RESET_PROGRESS' });
       logout();
-      navigate('/welcome', { replace: true });
+      setTimeout(() => navigate('/welcome', { replace: true }), 100);
     } catch {
       clearAllPerinData();
       dispatch({ type: 'SET_PROFILE', payload: null });
@@ -96,7 +96,7 @@ export default function Settings() {
       dispatch({ type: 'SET_ACTIVE_LANG', payload: {} });
       dispatch({ type: 'RESET_PROGRESS' });
       logout();
-      navigate('/welcome', { replace: true });
+      setTimeout(() => navigate('/welcome', { replace: true }), 100);
     }
   }
 
