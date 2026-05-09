@@ -36,7 +36,8 @@ async function pullCloudData(user, dispatch) {
     const row = rows?.[0];
     if (!row) return;
 
-    if (row.profile_data && typeof row.profile_data === 'object') {
+    // Only overwrite local data if cloud has something — never wipe data the user hasn't synced yet
+    if (row.profile_data?.name) {
       dispatch({ type: 'SET_PROFILE', payload: row.profile_data });
     }
     if (Array.isArray(row.languages_data) && row.languages_data.length > 0) {
@@ -47,7 +48,7 @@ async function pullCloudData(user, dispatch) {
       dispatch({ type: 'SET_VOCAB', payload: row.vocab_data });
       localStorage.setItem('perin_vocab', JSON.stringify(row.vocab_data));
     }
-    if (row.completed_data && typeof row.completed_data === 'object') {
+    if (row.completed_data && Object.keys(row.completed_data).length > 0) {
       localStorage.setItem('perin_completed', JSON.stringify(row.completed_data));
     }
   } catch { /* silent — cloud pull is best-effort */ }
@@ -66,15 +67,9 @@ export function useAuth() {
     if (!res.ok) throw new Error(data.error || data.msg || 'Login failed');
     if (!data.access_token) throw new Error('No access token received');
     const user = storeAuth(data, email);
-
-    // Clear previous user's data before loading new user's data
-    dispatch({ type: 'SET_PROFILE', payload: DEFAULT_PROFILE });
-    dispatch({ type: 'SET_LANGUAGES', payload: [] });
-    dispatch({ type: 'SET_ACTIVE_LANG', payload: {} });
-    dispatch({ type: 'SET_VOCAB', payload: [] });
-
     dispatch({ type: 'SET_USER', payload: user });
     fetchSubscription(user);
+    // Pull cloud data — only overwrites local data if Supabase has something saved
     await pullCloudData(user, dispatch);
     return user;
   }, [dispatch, fetchSubscription]);
