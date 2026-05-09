@@ -122,6 +122,88 @@ RETENTION (required every reply):
 SCENARIO END: When scenario concludes, end with [SCENARIO_COMPLETE] on its own line.`;
 }
 
+
+// ─── Dialect texting lingo ────────────────────────────────────────────────────
+const TEXTING_LINGO = {
+  'Dominican Republic': { label: 'Dominican', note: 'Dominicans text fast. "Klk" opens almost every conversation.', terms: [
+    ['klk', 'que lo que (what\'s up)'], ['kbr', 'qué baro (wow/crazy)'], ['q', 'que (that/what)'],
+    ['xq', 'por qué / porque (why/because)'], ['tq', 'te quiero (love you)'], ['ntp', 'no te preocupes (don\'t worry)'],
+    ['vdd', 'verdad (for real?)'], ['bno', 'bueno (okay)'], ['tb', 'también (also)'], ['hsta', 'hasta (later)'],
+  ]},
+  'Puerto Rico': { label: 'Puerto Rican', note: 'Puerto Rican texting drops vowels heavily.', terms: [
+    ['q', 'que'], ['xq', 'por qué / porque'], ['tb', 'también'], ['wepa', 'wepa (hell yeah / awesome)'],
+    ['ntp', 'no te preocupes'], ['toy', 'estoy (I am)'], ['ta', 'está (it\'s/is)'], ['vdd', 'verdad (for real?)'],
+  ]},
+  'Cuba': { label: 'Cuban', note: '"Qué bola" is the Cuban equivalent of "klk".', terms: [
+    ['asere', 'asere (dude/bro — ubiquitous)'], ['q bola', 'qué bola (what\'s up)'], ['q', 'que'],
+    ['xq', 'por qué / porque'], ['tb', 'también'], ['ntp', 'no te preocupes'],
+  ]},
+  'Mexico': { label: 'Mexican', note: '"Güey" appears in almost every Mexican text.', terms: [
+    ['q onda', 'qué onda (what\'s up)'], ['wey', 'güey/wey (dude — used constantly)'], ['q', 'que'],
+    ['xq', 'por qué / porque'], ['ntp', 'no te preocupes'], ['neta', 'neta (for real)'],
+    ['chido', 'chido (cool)'], ['grax', 'gracias (thanks)'], ['toy', 'estoy'], ['tb', 'también'],
+  ]},
+  'Colombia': { label: 'Colombian', note: 'Paisas use "marica" affectionately between friends.', terms: [
+    ['q', 'que'], ['xq', 'por qué / porque'], ['tb', 'también'], ['parcero', 'parcero (buddy — Paisa)'],
+    ['bacano', 'bacano (cool)'], ['ntp', 'no te preocupes'], ['grax', 'gracias'],
+    ['marica', 'marica (dude — Paisa, affectionate)'], ['toy', 'estoy'],
+  ]},
+  'Spain': { label: 'Castilian', note: 'Spain uses "k" for "que" constantly. "Finde" for weekend is universal.', terms: [
+    ['k', 'que (very common in Spain)'], ['q', 'que'], ['xq', 'por qué / porque'], ['tb', 'también'],
+    ['tio', 'tío (dude)'], ['xa', 'para (for)'], ['d', 'de (of)'], ['finde', 'fin de semana (weekend)'],
+    ['bss', 'besos (kisses — sign-off)'], ['aunke', 'aunque (even though)'],
+  ]},
+  'France': { label: 'French', note: '"Mdr" is the French lol. "Stp" ends almost every request.', terms: [
+    ['mdr', 'mort de rire (lol — literally dying of laughter)'], ['stp', 's\'il te plaît (please)'],
+    ['svp', 's\'il vous plaît (please — formal)'], ['pk', 'pourquoi (why)'], ['pcq', 'parce que (because)'],
+    ['bjr', 'bonjour (hello)'], ['nn', 'non (no)'], ['jtm', 'je t\'aime (I love you)'],
+    ['jsp', 'je sais pas (I don\'t know)'], ['c', 'c\'est (it\'s)'], ['t', 'tu es (you are)'],
+  ]},
+  'Brazil': { label: 'Brazilian', note: '"Kkk" is Brazilian laughter — completely normal. "Flw" and "vlw" end most conversations.', terms: [
+    ['vc', 'você (you)'], ['tb', 'também (also)'], ['q', 'que'], ['pq', 'porque / por que'],
+    ['ta', 'tá (okay/is)'], ['to', 'tô (I am)'], ['flw', 'falou (later / see ya)'],
+    ['vlw', 'valeu (thanks)'], ['blz', 'beleza (cool/okay)'], ['kkk', 'hahaha (Brazilian laughter)'],
+    ['cara', 'cara (dude)'], ['bj', 'beijo (kiss — sign-off)'],
+  ]},
+  'Portugal': { label: 'European Portuguese', note: 'Portuguese texting shares Brazilian abbreviations with a cooler feel.', terms: [
+    ['vc', 'você (you)'], ['tb', 'também'], ['q', 'que'], ['pq', 'porque / por que'],
+    ['fix', 'fixe (cool)'], ['ta', 'está (okay)'], ['obg', 'obrigado/a (thanks)'], ['bj', 'beijo'],
+  ]},
+  'Haiti': { label: 'Haitian Creole', note: 'French abbreviations appear often in Haitian texting.', terms: [
+    ['sp', 'sak pase (what\'s up)'], ['np', 'n ap boule (we\'re good)'], ['msi', 'mèsi (thanks)'],
+    ['bjr', 'bonjou (good morning)'], ['bsr', 'bonswa (good evening)'], ['wi', 'wi (yes)'],
+  ]},
+  'Italy': { label: 'Italian', note: '"Boh" is the Italian text shrug. "Cmq" ends a lot of Italian texts.', terms: [
+    ['cmq', 'comunque (anyway/whatever)'], ['tvb', 'ti voglio bene (I love/care for you)'],
+    ['ke', 'che (that/what)'], ['xke', 'perché (why/because)'], ['nn', 'non (not/no)'],
+    ['grz', 'grazie (thanks)'], ['pfv', 'per favore (please)'], ['anke', 'anche (also)'],
+    ['bho', 'boh (I dunno — classic Italian shrug)'],
+  ]},
+};
+
+function getLingoNote(dialect, lang) {
+  const d = (dialect || lang || '').toLowerCase();
+  for (const [key, val] of Object.entries(TEXTING_LINGO)) {
+    if (d.includes(key.toLowerCase()) || key.toLowerCase().includes(d.split(' ')[0].toLowerCase())) {
+      return val;
+    }
+  }
+  if (lang === 'Spanish') {
+    if (['dominican', 'dr'].some(x => d.includes(x))) return TEXTING_LINGO['Dominican Republic'];
+    if (d.includes('puerto')) return TEXTING_LINGO['Puerto Rico'];
+    if (d.includes('cuba')) return TEXTING_LINGO['Cuba'];
+    if (d.includes('mexico') || d.includes('mexican')) return TEXTING_LINGO['Mexico'];
+    if (d.includes('colombia')) return TEXTING_LINGO['Colombia'];
+    if (d.includes('spain') || d.includes('castilian') || d.includes('madrid')) return TEXTING_LINGO['Spain'];
+    return TEXTING_LINGO['Mexico'];
+  }
+  if (lang === 'French') return TEXTING_LINGO['France'];
+  if (lang === 'Italian') return TEXTING_LINGO['Italy'];
+  if (lang === 'Portuguese') return d.includes('portugal') || d.includes('european') ? TEXTING_LINGO['Portugal'] : TEXTING_LINGO['Brazil'];
+  if (lang === 'Creole') return TEXTING_LINGO['Haiti'];
+  return null;
+}
+
 function buildSystemPrompt(config, vocab) {
   const { lang, dialect, level, scenario, mode, nativeLang, motivation } = config;
   const levelInstruction = LEVEL_INSTRUCTIONS[level] || LEVEL_INSTRUCTIONS['intermediate'] || '';
@@ -158,7 +240,10 @@ function buildSystemPrompt(config, vocab) {
   } catch { /* silent */ }
 
   const introText = scenarioTitle ? `You are a character in the scenario: "${scenarioTitle}". ${scenario?.desc || ''}` : '';
-  return introText + dialectNote + `\n\nLEVEL: ${(level || 'intermediate').toUpperCase()}\n${levelInstruction}` + '\n\n' + getBasePrompt(nativeLang || 'English') + scenarioGuardrail + vocabList + motivNote + contextNote + sceneCultureNote + historyNote;
+  const lingo = getLingoNote(dialect, lang);
+  const lingoNote = lingo ? `\n\nTEXTING LINGO: This dialect commonly uses these abbreviations in chat. Understand them when the learner uses them, and use them naturally yourself in casual messages:\n${lingo.terms.map(([abbr, meaning]) => `- ${abbr} = ${meaning}`).join('\n')}\n${lingo.note}` : '';
+
+  return introText + dialectNote + `\n\nLEVEL: ${(level || 'intermediate').toUpperCase()}\n${levelInstruction}` + '\n\n' + getBasePrompt(nativeLang || 'English') + scenarioGuardrail + vocabList + motivNote + contextNote + sceneCultureNote + lingoNote + historyNote;
 }
 
 function stripMd(t) {
@@ -584,9 +669,11 @@ RULES:
         let errText = 'AI error. Try again.';
         if (res.status === 429) errText = 'Too many messages — wait a moment.';
         else if (res.status === 401) {
-          errText = validToken
-            ? 'Session expired. Please sign in again.'
-            : 'Sign in to start a conversation, or add an API key in Settings.';
+          // Token expired — clear auth and redirect to welcome
+          localStorage.removeItem('perin_auth');
+          dispatch({ type: 'SET_USER', payload: null });
+          navigate('/welcome', { replace: true });
+          return;
         }
         setMessages(prev => [...prev, { role: 'error', text: errText, id: Date.now() }]);
         return;
