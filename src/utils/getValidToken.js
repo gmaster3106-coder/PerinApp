@@ -11,21 +11,28 @@ function saveAuth(auth) {
   localStorage.setItem('perin_auth', JSON.stringify(auth));
 }
 
+function clearAuth() {
+  localStorage.removeItem('perin_auth');
+}
+
 export async function getValidToken() {
   const auth = loadAuth();
   if (!auth?.access_token) return null;
 
-  // Check JWT expiry
+  // Check JWT expiry — refresh if within 5 minutes of expiry
   let isExpired = false;
   try {
     const payload = JSON.parse(atob(auth.access_token.split('.')[1]));
-    isExpired = Date.now() > (payload.exp * 1000) - 60000;
+    isExpired = Date.now() > (payload.exp * 1000) - (5 * 60 * 1000);
   } catch {
-    return auth.access_token; // can't decode — return as-is
+    return auth.access_token;
   }
 
   if (!isExpired) return auth.access_token;
-  if (!auth.refresh_token) return auth.access_token; // expired but no refresh — return old, worker will 401
+  if (!auth.refresh_token) {
+    clearAuth();
+    return null;
+  }
 
   // Deduplicate concurrent refresh calls
   if (refreshPromise) return refreshPromise;
@@ -43,12 +50,20 @@ export async function getValidToken() {
       });
 
       if (!res.ok) {
-        console.warn('Token refresh failed:', res.status);
+        // Server rejected the refresh token — session is dead, clear it
+        if (res.status === 400 || res.status === 401) {
+          clearAuth();
+          return null;
+        }
+        // Other error (5xx) — return old token optimistically
         return auth.access_token;
       }
 
       const data = await res.json();
-      if (!data.access_token) return auth.access_token;
+      if (!data.access_token) {
+        clearAuth();
+        return null;
+      }
 
       const updated = {
         ...auth,
@@ -58,9 +73,9 @@ export async function getValidToken() {
       saveAuth(updated);
       return data.access_token;
 
-    } catch (e) {
-      console.warn('Token refresh error:', e);
-      return auth.access_token; // network issue — return old token, don't throw
+    } catch {
+      // Network error — return old token, don't clear
+      return auth.access_token;
     } finally {
       refreshPromise = null;
     }
