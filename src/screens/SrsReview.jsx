@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext.jsx';
 import { getValidToken } from '../utils/getValidToken.js';
@@ -91,6 +91,57 @@ export default function MyWords() {
 }
 
 // ── COLLECTION TAB ────────────────────────────────────────────────────────────
+function SessionMoments({ lang }) {
+  const [moments, setMoments] = React.useState([]);
+  const [expanded, setExpanded] = React.useState(false);
+
+  React.useEffect(() => {
+    try {
+      const all = JSON.parse(localStorage.getItem('perin_moments') || '[]');
+      const filtered = lang ? all.filter(m => !m.lang || m.lang === lang) : all;
+      setMoments(filtered);
+    } catch { setMoments([]); }
+  }, [lang]);
+
+  if (moments.length === 0) {
+    return (
+      <div style={{ background: 'var(--card)', border: '1.5px solid var(--border)', borderRadius: 14, padding: '20px', textAlign: 'center' }}>
+        <div style={{ fontSize: '1.8rem', marginBottom: 8 }}>💬</div>
+        <p style={{ fontWeight: 600, fontSize: '.88rem', marginBottom: 6 }}>No session phrases yet</p>
+        <p style={{ color: 'var(--muted)', fontSize: '.80rem', lineHeight: 1.6 }}>
+          Key phrases from your conversations will appear here automatically.
+        </p>
+      </div>
+    );
+  }
+
+  const shown = expanded ? moments : moments.slice(0, 5);
+
+  return (
+    <div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+        {shown.map((m, i) => (
+          <div key={i} style={{ background: 'var(--card)', border: '1.5px solid var(--border)', borderRadius: 11, padding: '11px 14px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ fontWeight: 700, fontSize: '.92rem', color: 'var(--ink)' }}>{m.phrase}</div>
+              <div style={{ fontSize: '.65rem', color: 'var(--muted)', flexShrink: 0, marginLeft: 10 }}>{m.scenario}</div>
+            </div>
+            {m.meaning && <div style={{ fontSize: '.76rem', color: 'var(--muted)', marginTop: 2 }}>{m.meaning}</div>}
+          </div>
+        ))}
+      </div>
+      {moments.length > 5 && (
+        <button
+          onClick={() => setExpanded(e => !e)}
+          style={{ background: 'none', border: 'none', color: 'var(--accent)', fontSize: '.8rem', fontWeight: 600, cursor: 'pointer', marginTop: 8, padding: 0 }}
+        >
+          {expanded ? 'Show less' : `Show all ${moments.length} phrases`}
+        </button>
+      )}
+    </div>
+  );
+}
+
 function CollectionTab({ state, navigate, onStartReview }) {
   const lang = state.activeLang?.lang || state.languages?.[0]?.lang || '';
   const vocab = loadVocab().filter(v => !v.lang || v.lang === lang);
@@ -152,13 +203,7 @@ function CollectionTab({ state, navigate, onStartReview }) {
       <div style={{ fontSize: '.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.12em', color: 'var(--muted)', marginBottom: 10, marginTop: 8 }}>
         💬 From sessions
       </div>
-      <div style={{ background: 'var(--card)', border: '1.5px solid var(--border)', borderRadius: 14, padding: '20px', textAlign: 'center' }}>
-        <div style={{ fontSize: '1.8rem', marginBottom: 8 }}>🔮</div>
-        <p style={{ fontWeight: 600, fontSize: '.88rem', marginBottom: 6 }}>Coming soon</p>
-        <p style={{ color: 'var(--muted)', fontSize: '.80rem', lineHeight: 1.6 }}>
-          Phrases you encounter in conversations will automatically appear here — no saving required.
-        </p>
-      </div>
+      <SessionMoments lang={lang} />
     </div>
   );
 }

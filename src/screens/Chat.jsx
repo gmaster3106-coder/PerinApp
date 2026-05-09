@@ -509,6 +509,7 @@ export default function Chat() {
   const [actionsOpen, setActionsOpen] = useState(false);
   const [grammarMode, setGrammarMode] = useState(true);
   const [voiceMode, setVoiceMode] = useState(false);
+  const [slowMode, setSlowMode] = useState(false);
   const [initialized, setInitialized] = useState(false);
   const [saveToast, setSaveToast] = useState(null);
   const [loopingId, setLoopingId] = useState(null);
@@ -548,7 +549,7 @@ export default function Chat() {
     setSpeakingId(msgId || null);
     try {
       const token = await getValidToken();
-      await speak({ text, voiceId, lang: getLangCode(lang, dialect), dialect, accessToken: token });
+      await speak({ text, voiceId, lang: getLangCode(lang, dialect), dialect, accessToken: token, slow: slowMode });
     } finally {
       setSpeakingId(null);
     }
@@ -740,7 +741,7 @@ RULES:
         const first = mainText.split(/(?<=[.!?])\s+/)[0] || mainText;
         const ttsText = first.length < 120 ? first : mainText.slice(0, 120);
         const token = await getValidToken();
-        speak({ text: ttsText, voiceId, lang: getLangCode(lang, dialect), dialect, accessToken: token });
+        speak({ text: ttsText, voiceId, lang: getLangCode(lang, dialect), dialect, accessToken: token, slow: slowMode });
       }
 
       if (scenarioComplete && mode !== 'freechat') setTimeout(endSession, 2000);
@@ -804,6 +805,36 @@ RULES:
         xp: Math.min((scenario?.xp || 50) + (msgCount * 3), 200),
       },
     });
+
+    // Save key phrases from this session to perin_moments
+    try {
+      const keyPhrases = [];
+      historyRef.current.forEach(m => {
+        if (m.role === 'assistant') {
+          const matches = [...(m.content || '').matchAll(/🔑\s*([^=\n]+?)\s*=\s*([^|\n]+)/g)];
+          matches.forEach(([, phrase, meaning]) => {
+            const p = phrase.trim();
+            const mn = meaning.trim();
+            if (p && mn && p.length < 80) keyPhrases.push({ phrase: p, meaning: mn });
+          });
+          const tryMatch = (m.content || '').match(/Try saying[^"]*"([^"]+)"/i);
+          if (tryMatch) keyPhrases.push({ phrase: tryMatch[1].trim(), meaning: '' });
+        }
+      });
+      if (keyPhrases.length > 0) {
+        const existing = JSON.parse(localStorage.getItem('perin_moments') || '[]');
+        const newMoments = keyPhrases.map(p => ({
+          ...p, lang, dialect,
+          scenario: scenario?.title || 'Free Chat',
+          date: new Date().toISOString(),
+        }));
+        // Keep last 100 moments, deduplicate by phrase
+        const merged = [...newMoments, ...existing];
+        const seen = new Set();
+        const deduped = merged.filter(m => { const k = m.phrase.toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true; });
+        localStorage.setItem('perin_moments', JSON.stringify(deduped.slice(0, 100)));
+      }
+    } catch {}
 
     const baseXP = Math.min((scenario?.xp || 50) + (msgCount * 3), 200);
     navigate('/summary', {
@@ -971,6 +1002,21 @@ RULES:
               onChange={e => setInput(e.target.value)}
               onKeyDown={handleKey}
             />
+            <button
+              className={`slow-btn${slowMode ? ' active' : ''}`}
+              onClick={() => setSlowMode(s => !s)}
+              title={slowMode ? 'Slow mode on' : 'Slow mode off'}
+              style={{
+                background: slowMode ? 'var(--accent)' : 'transparent',
+                border: '1.5px solid ' + (slowMode ? 'var(--accent)' : 'var(--border)'),
+                borderRadius: '50%',
+                width: 38, height: 38,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '1.1rem', cursor: 'pointer', flexShrink: 0,
+                color: slowMode ? '#fff' : 'var(--muted)',
+                transition: 'all .2s',
+              }}
+            >🐢</button>
             <button className={`mic-btn${isRecording ? ' listening' : ''}`} onClick={handleMic}>
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
