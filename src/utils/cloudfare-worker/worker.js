@@ -1,4 +1,4 @@
-// Perin Cloudflare Worker v5
+// Perin Cloudflare Worker v6
 // Secrets needed in Cloudflare dashboard:
 //   ANTHROPIC_KEY, ELEVENLABS_KEY, OPENAI_KEY
 //   SUPABASE_ANON_KEY, SUPABASE_SERVICE_KEY, SUPABASE_URL
@@ -258,13 +258,21 @@ export default {
 
     // ── MEMORY MOMENTS ──
     if (url.pathname === '/api/memory') {
+      // Rate limit per user across all memory operations
+      if (await checkRateLimit(env, `memory:${userId}`, 120, 3600))
+        return corsResponse(JSON.stringify({ error: 'Rate limit reached' }), 429, origin);
+
       if (request.method === 'GET') {
         const lang = url.searchParams.get('lang') || '';
         const dialect = url.searchParams.get('dialect') || '';
         const limit = Math.min(parseInt(url.searchParams.get('limit') || '5'), 200);
+        const fetchAll = url.searchParams.get('all') === '1';
         if (!userId) return corsResponse(JSON.stringify({ error: 'Auth required' }), 401, origin);
+        const dialectFilter = dialect ? `&dialect=eq.${encodeURIComponent(dialect)}` : '';
+        const dueFilter = fetchAll ? '' : `&sr_due=lte.${new Date().toISOString()}`;
+        const order = fetchAll ? 'created_at.desc' : 'sr_due.asc';
         const res = await fetch(
-          `${env.SUPABASE_URL}/rest/v1/memory_moments?user_id=eq.${userId}&lang=eq.${encodeURIComponent(lang)}&dialect=eq.${encodeURIComponent(dialect)}&sr_due=lte.${new Date().toISOString()}&order=sr_due.asc&limit=${limit}`,
+          `${env.SUPABASE_URL}/rest/v1/memory_moments?user_id=eq.${userId}&lang=eq.${encodeURIComponent(lang)}${dialectFilter}${dueFilter}&order=${order}&limit=${limit}`,
           { headers: { 'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': `Bearer ${env.SUPABASE_SERVICE_KEY}` } }
         );
         const data = await res.json();

@@ -3,6 +3,7 @@ import { useEffect, useRef } from 'react';
 import { useApp } from './context/AppContext.jsx';
 import { useTTS } from './hooks/useTTS.js';
 import { ErrorBoundary } from './utils/ErrorBoundary';
+import { initCrashReporting } from './utils/crashReporter.js';
 import Header from './components/Header.jsx';
 import Toast from './components/Toast.jsx';
 import AuthModal from './components/AuthModal.jsx';
@@ -47,6 +48,9 @@ function AppShell() {
   const navigate = useNavigate();
   const { unlockAudio } = useTTS();
   const audioUnlocked = useRef(false);
+
+  // Register global crash handlers once on mount
+  useEffect(() => { initCrashReporting(); }, []);
 
   const showHeader = !HIDE_HEADER_PATHS.has(location.pathname);
   const isLoggedIn = !!state.currentUser?.access_token;

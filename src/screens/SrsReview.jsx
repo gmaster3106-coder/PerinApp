@@ -96,11 +96,41 @@ function SessionMoments({ lang }) {
   const [expanded, setExpanded] = React.useState(false);
 
   React.useEffect(() => {
+    // 1. Load localStorage immediately so the UI isn't blank
     try {
       const all = JSON.parse(localStorage.getItem('perin_moments') || '[]');
       const filtered = lang ? all.filter(m => !m.lang || m.lang === lang) : all;
       setMoments(filtered);
     } catch { setMoments([]); }
+
+    // 2. Pull from Supabase and merge (cross-device sync)
+    if (!lang) return;
+    (async () => {
+      try {
+        const token = await getValidToken();
+        if (!token) return;
+        const res = await fetch(
+          `${WORKER_URL}/api/memory?lang=${encodeURIComponent(lang)}&all=1&limit=200`,
+          { headers: { 'Authorization': `Bearer ${token}` } }
+        );
+        if (!res.ok) return;
+        const cloudData = await res.json();
+        if (!Array.isArray(cloudData) || cloudData.length === 0) return;
+        const fromCloud = cloudData.map(m => ({
+          phrase:   m.phrase,
+          meaning:  m.translation || '',
+          lang:     m.lang,
+          dialect:  m.dialect || '',
+          scenario: m.source_scenario || '',
+          date:     m.created_at || '',
+        }));
+        setMoments(prev => {
+          const seen = new Set(prev.map(m => m.phrase.toLowerCase()));
+          const newOnes = fromCloud.filter(m => !seen.has(m.phrase.toLowerCase()));
+          return newOnes.length > 0 ? [...prev, ...newOnes] : prev;
+        });
+      } catch { /* silent — cloud pull is best-effort */ }
+    })();
   }, [lang]);
 
   if (moments.length === 0) {

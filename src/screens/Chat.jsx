@@ -6,6 +6,7 @@ import { useMic } from '../hooks/useMic.js';
 import { escapeHtml } from '../utils/escapeHtml.js';
 import { WORKER_URL } from '../config/constants.js';
 import { getValidToken } from '../utils/getValidToken.js';
+import { reportCrash } from '../utils/crashReporter.js';
 import { getLangCode } from '../utils/langUtils.js';
 import { LEVEL_INSTRUCTIONS } from '../data/levelInstructions.js';
 import { CULTURAL_CONTEXT } from '../data/culturalContext.js';
@@ -676,6 +677,10 @@ RULES:
           navigate('/welcome', { replace: true });
           return;
         }
+        // Report unexpected server errors
+        if (res.status >= 500) {
+          reportCrash('api_error', `HTTP ${res.status} from /api/chat`, { lang, dialect, level });
+        }
         setMessages(prev => [...prev, { role: 'error', text: errText, id: Date.now() }]);
         return;
       }
@@ -750,6 +755,7 @@ RULES:
       if (err?.name === 'AbortError') return;
       setMessages(prev => prev.filter(m => m.role !== 'typing' && m.role !== 'streaming'));
       setMessages(prev => [...prev, { role: 'error', text: 'Something went wrong. Try again.', id: Date.now() }]);
+      reportCrash('chat_error', err?.message || 'Unknown error', { stack: err?.stack?.slice(0, 200) });
     } finally {
       setIsSending(false);
       abortRef.current = null;
@@ -833,6 +839,24 @@ RULES:
         const seen = new Set();
         const deduped = merged.filter(m => { const k = m.phrase.toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true; });
         localStorage.setItem('perin_moments', JSON.stringify(deduped.slice(0, 100)));
+
+        // Fire-and-forget sync to Supabase (cross-device support)
+        getValidToken().then(token => {
+          if (!token) return;
+          const rows = newMoments.map(p => ({
+            phrase: p.phrase,
+            phrase_norm: p.phrase.toLowerCase().replace(/\s+/g, ' ').trim(),
+            translation: p.meaning || null,
+            lang,
+            dialect,
+            source_scenario: scenario?.title || 'Free Chat',
+          }));
+          fetch(`${WORKER_URL}/api/memory`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify(rows),
+          }).catch(() => {});
+        }).catch(() => {});
       }
     } catch {}
 
