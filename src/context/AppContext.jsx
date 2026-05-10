@@ -24,7 +24,6 @@ function lsSet(key, val) {
 
 function todayStr() { return new Date().toDateString(); }
 
-// Resolve initial dark mode: use saved preference if set, otherwise follow system
 function getInitialDark() {
   const saved = localStorage.getItem('perin_dark');
   if (saved !== null) return saved === '1';
@@ -58,6 +57,33 @@ function reducer(state, action) {
     case 'SET_LUMA_HISTORY':
       return { ...state, lumaHistory: action.payload };
 
+    // ── GRAMMAR ERROR TRACKING ──
+    case 'ADD_GRAMMAR_ERROR': {
+      const { correction, original, explanation, lang } = action.payload;
+      if (!correction || !original) return state;
+      const key = `${correction.toLowerCase()}::${lang}`;
+      const existing = state.grammarErrors.find(e =>
+        `${e.correction.toLowerCase()}::${e.lang}` === key
+      );
+      if (existing) {
+        return {
+          ...state,
+          grammarErrors: state.grammarErrors.map(e =>
+            `${e.correction.toLowerCase()}::${e.lang}` === key
+              ? { ...e, count: e.count + 1, lastSeen: Date.now() }
+              : e
+          ),
+        };
+      }
+      return {
+        ...state,
+        grammarErrors: [
+          { correction, original, explanation, lang, count: 1, firstSeen: Date.now(), lastSeen: Date.now() },
+          ...state.grammarErrors,
+        ].slice(0, 100),
+      };
+    }
+
     case 'AWARD_XP': {
       const amount = action.payload || 0;
       if (!amount) return state;
@@ -71,12 +97,10 @@ function reducer(state, action) {
       const yesterday = new Date(Date.now() - 86400000).toDateString();
       const missedDay = last !== yesterday && last !== '';
       const hasFreeze = (state.profile.streakFreezes || 0) > 0;
-      // Use a freeze if user missed a day but has one available
       const newStreak = last === yesterday
         ? (state.profile.streak || 0) + 1
         : (missedDay && hasFreeze) ? (state.profile.streak || 0) : 1;
       const newSessions = (state.profile.sessions || 0) + 1;
-      // Consume freeze if used, award new one every 7 sessions
       const usedFreeze = last !== yesterday && last !== '' && (state.profile.streakFreezes || 0) > 0;
       const newFreezes = newSessions % 7 === 0
         ? (state.profile.streakFreezes || 0) + 1
@@ -89,7 +113,7 @@ function reducer(state, action) {
           streak: newStreak,
           lastDate: today,
           sessions: newSessions,
-          streakFreezes: newFreezes,
+          streakFreezes: Math.max(0, newFreezes),
         },
       };
     }
@@ -103,6 +127,7 @@ function reducer(state, action) {
         profile: { ...DEFAULT_PROFILE, name: state.profile.name, native: state.profile.native, avatar: state.profile.avatar },
         history: [],
         languages: state.languages.map(l => ({ ...l, xp: 0, sessions: 0, history: [] })),
+        grammarErrors: [],
       };
     case 'CLEAR_VOCAB':
       return { ...state, vocab: [] };
@@ -122,6 +147,7 @@ export function AppProvider({ children }) {
     history: lsGet('perin_history', []),
     dark: getInitialDark(),
     lumaHistory: lsGet('perin_luma_history', []),
+    grammarErrors: lsGet('perin_grammar_errors', []),
   });
 
   const syncTimeoutRef = useRef(null);
@@ -129,7 +155,6 @@ export function AppProvider({ children }) {
 
   const isLoggedIn = !!state.currentUser?.access_token;
 
-  // Only persist profile and languages when logged in
   useEffect(() => {
     if (isLoggedIn) lsSet('perin_profile', state.profile);
   }, [state.profile, isLoggedIn]);
@@ -140,39 +165,36 @@ export function AppProvider({ children }) {
   useEffect(() => { lsSet('perin_vocab', state.vocab); }, [state.vocab]);
   useEffect(() => { lsSet('perin_history', state.history); }, [state.history]);
   useEffect(() => { lsSet('perin_luma_history', state.lumaHistory); }, [state.lumaHistory]);
+  useEffect(() => { lsSet('perin_grammar_errors', state.grammarErrors); }, [state.grammarErrors]);
 
-  // Persist subscription so conversations_used survives page reloads
   useEffect(() => {
     if (state.subscription?.status === 'free') {
       lsSet('perin_subscription', state.subscription);
     }
   }, [state.subscription]);
 
-  // Apply dark mode class and persist preference
   useEffect(() => {
     document.body.classList.toggle('dark', state.dark);
     localStorage.setItem('perin_dark', state.dark ? '1' : '0');
   }, [state.dark]);
 
-  // Listen for system dark mode changes (only when user hasn't set a preference)
   useEffect(() => {
-    const mq = window.matchMedia('(prefers-color-scheme: dark)')
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
     const handler = (e) => {
       if (localStorage.getItem('perin_dark') === null) {
-        dispatch({ type: 'SET_DARK', payload: e.matches })
+        dispatch({ type: 'SET_DARK', payload: e.matches });
       }
-    }
-    mq.addEventListener('change', handler)
-    return () => mq.removeEventListener('change', handler)
-  }, [])
+    };
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
 
   const syncToCloud = () => {
     if (!state.currentUser?.access_token) return;
     if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
     syncTimeoutRef.current = setTimeout(async () => {
-      const maxRetries = 3;
       let attempt = 0;
-
+      const maxRetries = 3;
       async function attemptSync() {
         try {
           const completed = lsGet('perin_completed', {});
@@ -194,7 +216,6 @@ export function AppProvider({ children }) {
               synced_at: new Date().toISOString(),
             }),
           });
-
           if (!res.ok) throw new Error(`Sync failed: ${res.status}`);
           syncRetryRef.current = 0;
         } catch {
@@ -205,7 +226,6 @@ export function AppProvider({ children }) {
           }
         }
       }
-
       attemptSync();
     }, 3000);
   };

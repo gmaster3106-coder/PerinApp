@@ -207,8 +207,7 @@ function ConnectionsPanel({ languages }) {
 const MISSION_ROUTES = {
   scenario: '/scenarios', scene: '/scenes', freechat: '/chat',
   fib: '/fib', sentence: '/sentence-builder', sentence_builder: '/sentence-builder',
-  listening: '/listening', quiz: '/vocab-quiz', srs: '/srs',
-  vocabquiz: '/vocab-quiz',
+  listening: '/listening', quiz: '/vocab-quiz', srs: '/srs', vocabquiz: '/vocab-quiz',
 };
 
 const AFTER_MISSION_SUGGESTIONS = [
@@ -224,7 +223,6 @@ function getDailyMission(sessions) {
   const key = 'perin_mission_' + new Date().toDateString();
   const saved = localStorage.getItem(key);
   if (saved) try { return JSON.parse(saved); } catch {}
-
   const pool = sessions === 0
     ? [{ task: 'Complete your first scenario conversation', type: 'scenario', icon: '💬', xp: 50 }]
     : sessions < 3
@@ -243,7 +241,6 @@ function getDailyMission(sessions) {
         { task: 'Try a Listen & Respond drill', type: 'listening', icon: '🎧', xp: 35 },
         { task: 'Build a sentence in the Sentence Builder', type: 'sentence', icon: '🔤', xp: 30 },
       ];
-
   const seed = new Date().toDateString();
   let hash = 0;
   for (const ch of seed) hash = (hash * 31 + ch.charCodeAt(0)) & 0xffffffff;
@@ -260,7 +257,6 @@ function DailyMission({ sessions, navigate, nextJourney }) {
   const mission = getDailyMission(sessions);
   const done = isDailyMissionDone();
   const route = MISSION_ROUTES[mission.type] || '/scenarios';
-
   const suggestions = AFTER_MISSION_SUGGESTIONS.filter(s => {
     if (s.path === 'journey') return !!nextJourney;
     return !route.includes(s.path.replace('/', ''));
@@ -287,9 +283,7 @@ function DailyMission({ sessions, navigate, nextJourney }) {
       )}
       {done && suggestions.length > 0 && (
         <div style={{ marginTop: '10px', borderTop: '1px solid var(--border)', paddingTop: '10px' }}>
-          <div style={{ fontSize: '.68rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--muted)', marginBottom: '7px' }}>
-            Keep going
-          </div>
+          <div style={{ fontSize: '.68rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--muted)', marginBottom: '7px' }}>Keep going</div>
           <div style={{ display: 'flex', gap: '8px' }}>
             {suggestions.map((s, i) => (
               <button key={i} onClick={() => s.path === 'journey' ? navigate('/journey') : navigate(s.path)}
@@ -345,7 +339,6 @@ function CultureCard({ dialect, lang }) {
           </div>
           <div style={{ fontSize: '.88rem', fontWeight: '700', color: 'var(--ink)', lineHeight: '1.3' }}>{fact.headline}</div>
         </div>
-        {/* Use a span without transform to avoid fixed positioning issues */}
         <span style={{ color: 'var(--muted)', fontSize: '1rem', flexShrink: 0 }}>{expanded ? '↓' : '›'}</span>
       </div>
       {expanded && (
@@ -377,23 +370,12 @@ function CulturalOnboardingModal({ dialect, lang, onClose }) {
   }, []);
 
   return ReactDOM.createPortal(
-    <div style={{
-      position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh',
-      background: 'rgba(0,0,0,.55)', zIndex: 9999,
-      display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
-    }}>
-      <div style={{
-        background: 'var(--card)', borderRadius: '20px 20px 0 0', padding: '24px 20px 40px',
-        width: '100vw', maxHeight: '85vh', overflowY: 'auto',
-      }}>
+    <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,.55)', zIndex: 9999, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+      <div style={{ background: 'var(--card)', borderRadius: '20px 20px 0 0', padding: '24px 20px 40px', width: '100vw', maxHeight: '85vh', overflowY: 'auto' }}>
         <div style={{ textAlign: 'center', marginBottom: '20px' }}>
           <div style={{ fontSize: '2.5rem', marginBottom: '10px' }}>{facts[0]?.emoji || '🌍'}</div>
-          <div style={{ fontFamily: "'Playfair Display',serif", fontSize: '1.3rem', fontWeight: '700', marginBottom: '6px' }}>
-            Welcome to {dialectLabel}
-          </div>
-          <p style={{ fontSize: '.82rem', color: 'var(--muted)', lineHeight: 1.5 }}>
-            A few things that'll help your conversations feel natural from day one.
-          </p>
+          <div style={{ fontFamily: "'Playfair Display',serif", fontSize: '1.3rem', fontWeight: '700', marginBottom: '6px' }}>Welcome to {dialectLabel}</div>
+          <p style={{ fontSize: '.82rem', color: 'var(--muted)', lineHeight: 1.5 }}>A few things that'll help your conversations feel natural from day one.</p>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '20px' }}>
           {highlights.map((fact, i) => (
@@ -413,6 +395,21 @@ function CulturalOnboardingModal({ dialect, lang, onClose }) {
     </div>,
     document.body
   );
+}
+
+// ── Streak recovery helper ────────────────────────────────────────────────────
+function getStreakRecoveryInfo(profile) {
+  if (!profile) return null;
+  const streak = profile.streak || 0;
+  const lastDate = profile.lastDate || '';
+  if (!lastDate || streak === 0) return null;
+  const today = new Date().toDateString();
+  const yesterday = new Date(Date.now() - 86400000).toDateString();
+  // Show recovery card if last session was 2-5 days ago (streak broken, still recent)
+  if (lastDate === today || lastDate === yesterday) return null;
+  const daysSince = Math.round((Date.now() - new Date(lastDate).getTime()) / 86400000);
+  if (daysSince < 2 || daysSince > 7) return null;
+  return { daysSince, lastStreak: streak };
 }
 
 export default function Dashboard() {
@@ -444,6 +441,7 @@ export default function Dashboard() {
   const anyDone = lang && JOURNEY_STAGES.some(s => s.indices.some(idx => isScenarioDone(lang, dialect, s.level, idx)));
   const stageProgress = lang ? getCurrentStageProgress(lang, dialect) : null;
   const revisit = lang ? getScenarioRevisitSuggestion(lang, dialect) : null;
+  const streakRecovery = getStreakRecoveryInfo(profile);
 
   useMemo(() => {
     if (!lang) return;
@@ -467,9 +465,7 @@ export default function Dashboard() {
     dispatch({ type: 'SET_ACTIVE_LANG', payload: newLang });
     const d = newLang.dialect || newLang.lang;
     const l = newLang.lang;
-    if (getFactsForDialect(d, l)) {
-      setOnboarding({ dialect: d, lang: l });
-    }
+    if (getFactsForDialect(d, l)) setOnboarding({ dialect: d, lang: l });
   }
 
   function continueJourney() {
@@ -480,11 +476,7 @@ export default function Dashboard() {
   return (
     <div className="screen active" id="screen-setup">
       {onboarding && (
-        <CulturalOnboardingModal
-          dialect={onboarding.dialect}
-          lang={onboarding.lang}
-          onClose={() => setOnboarding(null)}
-        />
+        <CulturalOnboardingModal dialect={onboarding.dialect} lang={onboarding.lang} onClose={() => setOnboarding(null)} />
       )}
       <div style={{ width: '100%', maxWidth: '600px' }}>
 
@@ -496,6 +488,28 @@ export default function Dashboard() {
           {lang && <DailyRing goal={activeLang?.dailyGoal || 30} />}
         </div>
 
+        {/* ── Streak recovery card ── */}
+        {lang && streakRecovery && (
+          <div style={{ background: 'linear-gradient(135deg,rgba(239,68,68,.08),rgba(239,68,68,.03))', border: '1.5px solid rgba(239,68,68,.25)', borderRadius: '14px', padding: '14px 16px', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span style={{ fontSize: '1.6rem' }}>💔</span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: '.78rem', fontWeight: '700', color: '#c62828', marginBottom: 2 }}>
+                {streakRecovery.daysSince === 2 ? 'Streak broken yesterday' : `${streakRecovery.daysSince} days without practice`}
+              </div>
+              <div style={{ fontSize: '.72rem', color: 'var(--muted)', lineHeight: 1.4 }}>
+                You had a {streakRecovery.lastStreak}-day streak. One session today gets you back on track.
+              </div>
+            </div>
+            <button
+              onClick={() => navigate('/scenarios')}
+              style={{ background: '#ef4444', color: '#fff', border: 'none', borderRadius: '8px', padding: '7px 12px', fontFamily: "'DM Sans',sans-serif", fontSize: '.72rem', fontWeight: '700', cursor: 'pointer', flexShrink: 0, whiteSpace: 'nowrap' }}
+            >
+              Let's go →
+            </button>
+          </div>
+        )}
+
+        {/* ── Streak at risk ── */}
         {lang && (() => {
           const streak = profile?.streak || 0;
           const lastDate = profile?.lastDate || '';
@@ -503,7 +517,7 @@ export default function Dashboard() {
           const hour = new Date().getHours();
           const practisedToday = lastDate === today;
           const streakAtRisk = streak >= 3 && !practisedToday && hour >= 20;
-          if (!streakAtRisk) return null;
+          if (!streakAtRisk || streakRecovery) return null;
           return (
             <div style={{ background: 'linear-gradient(135deg,#fef3c7,#fde68a)', border: '1.5px solid #f59e0b', borderRadius: '14px', padding: '12px 16px', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '12px' }}>
               <span style={{ fontSize: '1.5rem' }}>🔥</span>
@@ -515,7 +529,7 @@ export default function Dashboard() {
           );
         })()}
 
-        {/* Streak freeze card — show when user has a streak and freezes */}
+        {/* ── Streak freeze card ── */}
         {lang && (() => {
           const streak = profile?.streak || 0;
           const freezes = profile?.streakFreezes || 0;
@@ -528,9 +542,7 @@ export default function Dashboard() {
                   Streak Freezes · <span style={{ color: freezes > 0 ? '#22c55e' : 'var(--muted)' }}>{freezes} available</span>
                 </div>
                 <div style={{ fontSize: '.72rem', color: 'var(--muted)', marginTop: 2 }}>
-                  {freezes > 0
-                    ? 'A freeze protects your streak if you miss a day.'
-                    : 'Complete 7 sessions to earn a freeze.'}
+                  {freezes > 0 ? 'A freeze protects your streak if you miss a day.' : 'Complete 7 sessions to earn a freeze.'}
                 </div>
               </div>
               {freezes === 0 && (
@@ -543,6 +555,7 @@ export default function Dashboard() {
           );
         })()}
 
+        {/* ── Level up suggestion ── */}
         {lang && (() => {
           const sessions = profile?.sessions || 0;
           const level = activeLang?.level || 'beginner';

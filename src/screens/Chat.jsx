@@ -17,28 +17,15 @@ function getCultureTip(dialect, lang, scenarioTitle) {
   const ctx = CULTURAL_CONTEXT?.[dialect]?.[scenarioTitle]
     || CULTURAL_CONTEXT?.[lang]?.[scenarioTitle];
   if (!ctx) return null;
-
-  const normalized = ctx
-    .replace(/ -- /g, '. ')
-    .replace(/ — /g, '. ')
-    .replace(/\s+/g, ' ')
-    .trim();
-
+  const normalized = ctx.replace(/ -- /g, '. ').replace(/ — /g, '. ').replace(/\s+/g, ' ').trim();
   const sentences = normalized.split(/(?<=[.!?])\s+/).filter(s => s.trim().length > 30);
   if (!sentences.length) return null;
-
   const dialectName = (dialect || lang).split(' ')[0];
-
-  const namedSentence = sentences.find(s =>
-    s.toLowerCase().includes(dialectName.toLowerCase())
-  );
+  const namedSentence = sentences.find(s => s.toLowerCase().includes(dialectName.toLowerCase()));
   if (namedSentence) return namedSentence.replace(/\*+/g, '').replace(/\s{2,}/g, ' ').trim();
-
   const hasRule = s => /\b(never|don't|avoid|forbidden|only after|considered rude|considered insulting|marks you|signals you|not acceptable|expected to|always say|must say)\b/i.test(s);
   const ruleSentence = sentences.find(hasRule);
   if (ruleSentence) return ruleSentence.trim();
-
-  // No sentence meets the quality bar — show nothing rather than a weak tip
   return null;
 }
 
@@ -46,18 +33,10 @@ function CultureTipBanner({ dialect, lang, scenarioTitle, onDismiss }) {
   const tip = getCultureTip(dialect, lang, scenarioTitle);
   if (!tip) return null;
   return (
-    <div style={{
-      background: 'rgba(26,86,219,.05)', borderBottom: '1px solid var(--border)',
-      padding: '9px 14px', display: 'flex', alignItems: 'flex-start', gap: '8px',
-    }}>
+    <div style={{ background: 'rgba(26,86,219,.05)', borderBottom: '1px solid var(--border)', padding: '9px 14px', display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
       <span style={{ flexShrink: 0, marginTop: '1px', fontSize: '.82rem' }}>💡</span>
       <span style={{ flex: 1, fontSize: '.82rem', color: 'var(--muted)', lineHeight: '1.5', wordBreak: 'normal', overflowWrap: 'break-word', fontFamily: "'DM Sans', sans-serif" }}>{tip}</span>
-      <button
-        onClick={onDismiss}
-        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', fontSize: '.8rem', padding: '0 0 0 4px', flexShrink: 0 }}
-      >
-        ✕
-      </button>
+      <button onClick={onDismiss} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', fontSize: '.8rem', padding: '0 0 0 4px', flexShrink: 0 }}>✕</button>
     </div>
   );
 }
@@ -85,23 +64,47 @@ function parseChip(chip) {
   return { word: w.trim(), meaning: rest.join(sep).trim() };
 }
 
-// ─── Spinner component ────────────────────────────────────────────────────────
+// ─── Pronunciation feedback ───────────────────────────────────────────────────
+function scorePronunciation(transcribed, shadowPhrase) {
+  if (!transcribed || !shadowPhrase) return null;
+  const normalize = s => s.toLowerCase().replace(/[^a-záéíóúüñàâæçèêëîïôœùûüÿāīūàèìòùäöüß\s]/gi, '').trim();
+  const tWords = normalize(transcribed).split(/\s+/).filter(Boolean);
+  const sWords = normalize(shadowPhrase).split(/\s+/).filter(Boolean);
+  if (sWords.length === 0) return null;
+  const matches = tWords.filter(w => sWords.includes(w)).length;
+  const ratio = matches / sWords.length;
+  if (ratio >= 0.8) return 'great';
+  if (ratio >= 0.5) return 'close';
+  return null; // don't show feedback if too far off — not useful
+}
+
+// ─── Grammar error parser ─────────────────────────────────────────────────────
+function parseGrammarCorrections(text) {
+  // Matches: Say 'X' not 'Y' / Use 'X' not 'Y' / say "X" not "Y"
+  const corrections = [];
+  const pattern = /(?:say|use)\s+['"]([^'"]+)['"]\s+not\s+['"]([^'"]+)['"]\s*[—–-]?\s*([^.!\n]*)/gi;
+  let match;
+  while ((match = pattern.exec(text)) !== null) {
+    const [, correction, original, explanation] = match;
+    if (correction && original) {
+      corrections.push({
+        correction: correction.trim(),
+        original: original.trim(),
+        explanation: explanation.trim(),
+      });
+    }
+  }
+  return corrections;
+}
+
+// ─── Spinner ──────────────────────────────────────────────────────────────────
 function Spinner() {
   return (
-    <span style={{
-      display: 'inline-block',
-      width: 12,
-      height: 12,
-      border: '2px solid currentColor',
-      borderTopColor: 'transparent',
-      borderRadius: '50%',
-      animation: 'spin .7s linear infinite',
-      flexShrink: 0,
-    }} />
+    <span style={{ display: 'inline-block', width: 12, height: 12, border: '2px solid currentColor', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin .7s linear infinite', flexShrink: 0 }} />
   );
 }
 
-// ─── Prompt builders ─────────────────────────────────────────────────────────
+// ─── Prompt builders ──────────────────────────────────────────────────────────
 function getBasePrompt(nativeLang) {
   return `You are a native speaker having a real conversation. Speak in the target language; keep meta-communication in ${nativeLang}.
 
@@ -122,7 +125,6 @@ RETENTION (required every reply):
 
 SCENARIO END: When scenario concludes, end with [SCENARIO_COMPLETE] on its own line.`;
 }
-
 
 // ─── Dialect texting lingo ────────────────────────────────────────────────────
 const TEXTING_LINGO = {
@@ -185,9 +187,7 @@ const TEXTING_LINGO = {
 function getLingoNote(dialect, lang) {
   const d = (dialect || lang || '').toLowerCase();
   for (const [key, val] of Object.entries(TEXTING_LINGO)) {
-    if (d.includes(key.toLowerCase()) || key.toLowerCase().includes(d.split(' ')[0].toLowerCase())) {
-      return val;
-    }
+    if (d.includes(key.toLowerCase()) || key.toLowerCase().includes(d.split(' ')[0].toLowerCase())) return val;
   }
   if (lang === 'Spanish') {
     if (['dominican', 'dr'].some(x => d.includes(x))) return TEXTING_LINGO['Dominican Republic'];
@@ -217,47 +217,28 @@ function buildSystemPrompt(config, vocab) {
     : '';
   const scenarioTitle = scenario?.title || '';
   const scenarioGuardrail = scenarioTitle && mode !== 'freechat'
-    ? `\n\nSCENARIO: Keep the conversation about "${scenarioTitle}".`
-    : '';
+    ? `\n\nSCENARIO: Keep the conversation about "${scenarioTitle}".` : '';
   const motivNote = motivation ? `\n\nLEARNER: Their reason for learning ${lang}: "${motivation}".` : '';
   const contextNote = config.context ? `\n\nREADING CONTEXT: The learner just read this text: "${config.context.slice(0, 300)}". Discuss it naturally.` : '';
-
   let sceneCultureNote = '';
   if (mode === 'scene' && scenario?.title) {
-    const sceneCtx = CULTURAL_CONTEXT?.[dialect]?.[scenario.title]
-      || CULTURAL_CONTEXT?.[lang]?.[scenario.title];
-    if (sceneCtx) {
-      sceneCultureNote = `\n\nCULTURAL CONTEXT FOR THIS SCENE: ${sceneCtx} Use this to make your character and reactions feel authentically ${dialect || lang}.`;
-    }
+    const sceneCtx = CULTURAL_CONTEXT?.[dialect]?.[scenario.title] || CULTURAL_CONTEXT?.[lang]?.[scenario.title];
+    if (sceneCtx) sceneCultureNote = `\n\nCULTURAL CONTEXT FOR THIS SCENE: ${sceneCtx} Use this to make your character and reactions feel authentically ${dialect || lang}.`;
   }
-
   let historyNote = '';
   try {
     const history = JSON.parse(localStorage.getItem('perin_history') || '[]');
     const recent = history.filter(s => s.lang === lang).slice(0, 5).map(s => s.scenario).filter(Boolean);
-    if (recent.length > 0) {
-      historyNote = `\n\nRECENT SESSIONS: The learner has recently practiced: ${recent.join(', ')}. Reference these naturally if relevant, and vary your approach so each session feels fresh.`;
-    }
+    if (recent.length > 0) historyNote = `\n\nRECENT SESSIONS: The learner has recently practiced: ${recent.join(', ')}. Reference these naturally if relevant, and vary your approach so each session feels fresh.`;
   } catch { /* silent */ }
-
   const introText = scenarioTitle ? `You are a character in the scenario: "${scenarioTitle}". ${scenario?.desc || ''}` : '';
   const lingo = getLingoNote(dialect, lang);
   const lingoNote = lingo ? `\n\nTEXTING LINGO: This dialect commonly uses these abbreviations in chat. Understand them when the learner uses them, and use them naturally yourself in casual messages:\n${lingo.terms.map(([abbr, meaning]) => `- ${abbr} = ${meaning}`).join('\n')}\n${lingo.note}` : '';
-
   return introText + dialectNote + `\n\nLEVEL: ${(level || 'intermediate').toUpperCase()}\n${levelInstruction}` + '\n\n' + getBasePrompt(nativeLang || 'English') + scenarioGuardrail + vocabList + motivNote + contextNote + sceneCultureNote + lingoNote + historyNote;
 }
 
 function stripMd(t) {
-  return (t || '')
-    .replace(/\*[^*]+\*/g, '')
-    .replace(/\*\*(.+?)\*\*/g, '$1')
-    .replace(/`(.+?)`/g, '$1')
-    .replace(/^#{1,3} /gm, '')
-    .replace(/\(\s*\)/g, '')
-    .replace(/\[\s*\]/g, '')
-    .replace(/\n\n/g, '\n')
-    .replace(/[ \t]{2,}/g, ' ')
-    .trim();
+  return (t || '').replace(/\*[^*]+\*/g, '').replace(/\*\*(.+?)\*\*/g, '$1').replace(/`(.+?)`/g, '$1').replace(/^#{1,3} /gm, '').replace(/\(\s*\)/g, '').replace(/\[\s*\]/g, '').replace(/\n\n/g, '\n').replace(/[ \t]{2,}/g, ' ').trim();
 }
 
 function parseRetention(text) {
@@ -271,11 +252,7 @@ function parseRetention(text) {
     });
   }
   const shadowMatch = raw.match(/\u{1FAB6}\s*Try saying:\s*"([^"]+)"/u);
-  const cleaned = raw
-    .split('\n')
-    .filter(line => !/\u{1F511}/u.test(line) && !/\u{1FAB6}/u.test(line))
-    .join('\n')
-    .trim();
+  const cleaned = raw.split('\n').filter(line => !/\u{1F511}/u.test(line) && !/\u{1FAB6}/u.test(line)).join('\n').trim();
   const mainText = stripMd(cleaned);
   return { mainText, chips, shadow: shadowMatch?.[1] || '' };
 }
@@ -288,17 +265,11 @@ function parseOpeningMessage(text) {
   const welcomeText = goalIdx > 0 ? text.slice(0, goalIdx).trim() : '';
   let afterPhrase = '';
   if (phraseIdx > 0) {
-    const afterLine = text.slice(phraseIdx).split('\n').slice(1)
-      .filter(l => !/[\u{1F511}\u{1FAB6}]/u.test(l))
-      .join('\n').trim();
+    const afterLine = text.slice(phraseIdx).split('\n').slice(1).filter(l => !/[\u{1F511}\u{1FAB6}]/u.test(l)).join('\n').trim();
     afterPhrase = afterLine;
   }
-  // Strip retention chip lines from phraseMeaning
   const rawMeaning = phraseMatch ? phraseMatch[2].trim() : '';
-  const cleanMeaning = rawMeaning
-    .split('\n')
-    .map(l => l.replace(/\u{1F511}.*/u, '').replace(/\u{1FAB6}.*/u, '').trim())
-    .find(l => l.length > 0) || rawMeaning;
+  const cleanMeaning = rawMeaning.split('\n').map(l => l.replace(/\u{1F511}.*/u, '').replace(/\u{1FAB6}.*/u, '').trim()).find(l => l.length > 0) || rawMeaning;
   return {
     welcome: stripChips(stripMd(welcomeText)),
     goal: goalMatch ? stripChips(goalMatch[1].trim()) : '',
@@ -308,38 +279,24 @@ function parseOpeningMessage(text) {
   };
 }
 
-// ─── Chip bar with save ───────────────────────────────────────────────────────
 function ChipBar({ chips, lang, onSave }) {
   const [saved, setSaved] = useState({});
   if (!chips?.length) return null;
-
   function handleSave(chip) {
     const { word, meaning } = parseChip(chip);
     const didSave = saveWordToVocab(word, meaning, lang);
     setSaved(s => ({ ...s, [chip]: didSave ? 'saved' : 'already' }));
     onSave?.(word, didSave);
   }
-
   return (
     <div className="key-phrase-bar">
       {chips.map((chip, i) => (
         <span key={i} style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
           <span className="kp-chip">{chip}</span>
           {saved[chip] ? (
-            <span style={{ fontSize: '.65rem', color: '#2e7d32', fontWeight: 600 }}>
-              {saved[chip] === 'saved' ? '✅' : '✓'}
-            </span>
+            <span style={{ fontSize: '.65rem', color: '#2e7d32', fontWeight: 600 }}>{saved[chip] === 'saved' ? '✅' : '✓'}</span>
           ) : (
-            <button
-              onClick={() => handleSave(chip)}
-              style={{
-                background: 'none', border: '1px solid var(--border)', borderRadius: 6,
-                padding: '1px 6px', fontSize: '.65rem', color: 'var(--muted)',
-                cursor: 'pointer', fontFamily: "'DM Sans',sans-serif",
-              }}
-            >
-              💾
-            </button>
+            <button onClick={() => handleSave(chip)} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 6, padding: '1px 6px', fontSize: '.65rem', color: 'var(--muted)', cursor: 'pointer', fontFamily: "'DM Sans',sans-serif" }}>💾</button>
           )}
         </span>
       ))}
@@ -348,34 +305,18 @@ function ChipBar({ chips, lang, onSave }) {
 }
 
 function stripAsteriskActions(text) {
-  return (text || '')
-    .replace(/\*\*[^*\n]*\*\*/g, '')  // strip **bold**
-    .replace(/\*\*[^*\n]*/g, '')         // strip unclosed **
-    .replace(/\*[^*\n]+\*/g, '')         // strip *italic/action*
-    .replace(/\d+\.\s*—/g, '—')         // clean "1. —" list artifacts
-    .replace(/\(\s*\)/g, '')
-    .replace(/\[\s*\]/g, '')
-    .replace(/[ \t]{2,}/g, ' ')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
+  return (text || '').replace(/\*\*[^*\n]*\*\*/g, '').replace(/\*\*[^*\n]*/g, '').replace(/\*[^*\n]+\*/g, '').replace(/\d+\.\s*—/g, '—').replace(/\(\s*\)/g, '').replace(/\[\s*\]/g, '').replace(/[ \t]{2,}/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
 }
-
 
 function stripChips(text) {
   if (!text) return '';
-  return text
-    .split('\n')
-    .map(l => l.replace(/\u{1F511}[^\n]*/u, '').replace(/\u{1FAB6}[^\n]*/u, '').trim())
-    .filter(l => l.length > 0)
-    .join('\n')
-    .trim();
+  return text.split('\n').map(l => l.replace(/\u{1F511}[^\n]*/u, '').replace(/\u{1FAB6}[^\n]*/u, '').trim()).filter(l => l.length > 0).join('\n').trim();
 }
 
 // ─── Message components ───────────────────────────────────────────────────────
 function OpeningMessage({ msg, level, lang, onPlay, onLoop, onTranslate, onSave, looping, translation, speaking }) {
   const parsed = parseOpeningMessage(msg.text);
   const [saved, setSaved] = useState(false);
-
   function handleSaveMessage() {
     if (saved) return;
     const phrase = parsed.phraseTarget || parsed.welcome || msg.text.slice(0, 60);
@@ -383,7 +324,6 @@ function OpeningMessage({ msg, level, lang, onPlay, onLoop, onTranslate, onSave,
     const didSave = saveWordToVocab(phrase, meaning, lang);
     if (didSave) { setSaved(true); onSave?.(phrase, true); }
   }
-
   return (
     <div className="ai-hero-card">
       <div className="ai-hero-text">
@@ -402,35 +342,18 @@ function OpeningMessage({ msg, level, lang, onPlay, onLoop, onTranslate, onSave,
           </div>
         )}
         {parsed.after && <div style={{ marginTop: '8px', fontSize: '.9rem', color: 'var(--muted)' }}>{parsed.after}</div>}
-        {!parsed.welcome && !parsed.goal && !parsed.phraseTarget && (
-          <div>{stripAsteriskActions(msg.text)}</div>
-        )}
+        {!parsed.welcome && !parsed.goal && !parsed.phraseTarget && <div>{stripAsteriskActions(msg.text)}</div>}
       </div>
       <div className="ai-hero-actions">
-        <button
-          className="ai-hero-btn play-btn"
-          onClick={() => onPlay(msg.text, msg.id)}
-          disabled={speaking}
-          style={{ display: 'flex', alignItems: 'center', gap: 5, opacity: speaking ? 0.7 : 1 }}
-        >
+        <button className="ai-hero-btn play-btn" onClick={() => onPlay(msg.text, msg.id)} disabled={speaking} style={{ display: 'flex', alignItems: 'center', gap: 5, opacity: speaking ? 0.7 : 1 }}>
           {speaking ? <Spinner /> : <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>}
           {speaking ? 'Loading…' : 'Play'}
         </button>
-        <button className={`ai-hero-btn loop-btn${looping ? ' active' : ''}`} onClick={() => onLoop(msg.text)}>
-          {looping ? '⏹ Stop' : 'Loop'}
-        </button>
-        <button className="ai-hero-btn" onClick={handleSaveMessage} style={{ color: saved ? '#2e7d32' : undefined }}>
-          {saved ? '✓ Saved' : 'Save'}
-        </button>
-        <button className="ai-hero-btn" onClick={() => onTranslate(msg.id, msg.text)}>
-          {translation ? 'Hide' : 'Translate'}
-        </button>
+        <button className={`ai-hero-btn loop-btn${looping ? ' active' : ''}`} onClick={() => onLoop(msg.text)}>{looping ? '⏹ Stop' : 'Loop'}</button>
+        <button className="ai-hero-btn" onClick={handleSaveMessage} style={{ color: saved ? '#2e7d32' : undefined }}>{saved ? '✓ Saved' : 'Save'}</button>
+        <button className="ai-hero-btn" onClick={() => onTranslate(msg.id, msg.text)}>{translation ? 'Hide' : 'Translate'}</button>
       </div>
-      {translation && (
-        <div style={{ fontSize: '.8rem', color: 'var(--muted)', fontStyle: 'italic', marginTop: 6, padding: '6px 0' }}>
-          🌐 {translation}
-        </div>
-      )}
+      {translation && <div style={{ fontSize: '.8rem', color: 'var(--muted)', fontStyle: 'italic', marginTop: 6, padding: '6px 0' }}>🌐 {translation}</div>}
       <ChipBar chips={msg.chips} lang={lang} onSave={onSave} />
     </div>
   );
@@ -439,43 +362,26 @@ function OpeningMessage({ msg, level, lang, onPlay, onLoop, onTranslate, onSave,
 function AiMessage({ msg, level, lang, onPlay, onLoop, onTranslate, onSave, looping, translation, speaking }) {
   const cleanText = stripChips(stripAsteriskActions(msg.text));
   const [saved, setSaved] = useState(false);
-
   function handleSaveMessage() {
     if (saved) return;
     const phrase = cleanText.split(/[.!?]/)[0].trim().slice(0, 80);
     const didSave = saveWordToVocab(phrase, '', lang);
     if (didSave) { setSaved(true); onSave?.(phrase, true); }
   }
-
   return (
     <div className="ai-hero-card" style={{ borderLeft: '3px solid var(--accent)' }}>
       <div className="ai-hero-text">{cleanText}</div>
       {msg.grammarNote && <div className="grammar-note">{msg.grammarNote}</div>}
       <div className="ai-hero-actions">
-        <button
-          className="ai-hero-btn play-btn"
-          onClick={() => onPlay(msg.text, msg.id)}
-          disabled={speaking}
-          style={{ display: 'flex', alignItems: 'center', gap: 5, opacity: speaking ? 0.7 : 1 }}
-        >
+        <button className="ai-hero-btn play-btn" onClick={() => onPlay(msg.text, msg.id)} disabled={speaking} style={{ display: 'flex', alignItems: 'center', gap: 5, opacity: speaking ? 0.7 : 1 }}>
           {speaking ? <Spinner /> : <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>}
           {speaking ? 'Loading…' : 'Play'}
         </button>
-        <button className={`ai-hero-btn loop-btn${looping ? ' active' : ''}`} onClick={() => onLoop(msg.text)}>
-          {looping ? '⏹ Stop' : 'Loop'}
-        </button>
-        <button className="ai-hero-btn" onClick={handleSaveMessage} style={{ color: saved ? '#2e7d32' : undefined }}>
-          {saved ? '✓ Saved' : 'Save'}
-        </button>
-        <button className="ai-hero-btn" onClick={() => onTranslate(msg.id, msg.text)}>
-          {translation ? 'Hide' : 'Translate'}
-        </button>
+        <button className={`ai-hero-btn loop-btn${looping ? ' active' : ''}`} onClick={() => onLoop(msg.text)}>{looping ? '⏹ Stop' : 'Loop'}</button>
+        <button className="ai-hero-btn" onClick={handleSaveMessage} style={{ color: saved ? '#2e7d32' : undefined }}>{saved ? '✓ Saved' : 'Save'}</button>
+        <button className="ai-hero-btn" onClick={() => onTranslate(msg.id, msg.text)}>{translation ? 'Hide' : 'Translate'}</button>
       </div>
-      {translation && (
-        <div style={{ fontSize: '.8rem', color: 'var(--muted)', fontStyle: 'italic', marginTop: 6, padding: '6px 0' }}>
-          🌐 {translation}
-        </div>
-      )}
+      {translation && <div style={{ fontSize: '.8rem', color: 'var(--muted)', fontStyle: 'italic', marginTop: 6, padding: '6px 0' }}>🌐 {translation}</div>}
       <ChipBar chips={msg.chips} lang={lang} onSave={onSave} />
       {msg.shadow && (
         <div style={{ marginTop: '8px', padding: '8px 12px', background: 'var(--cream)', borderRadius: '10px', fontSize: '.78rem', color: 'var(--muted)', fontStyle: 'italic' }}>
@@ -517,11 +423,11 @@ export default function Chat() {
   const [translations, setTranslations] = useState({});
   const [showCultureTip, setShowCultureTip] = useState(true);
   const [speakingId, setSpeakingId] = useState(null);
+  const [pronunciationToast, setPronunciationToast] = useState(null);
   const loopRef = useRef(null);
+  const lastShadowRef = useRef(''); // tracks most recent 🪞 Try saying phrase
 
-  const [voiceGender, setVoiceGender] = useState(() =>
-    localStorage.getItem('perin_voice_gender_pref') || 'auto'
-  );
+  const [voiceGender, setVoiceGender] = useState(() => localStorage.getItem('perin_voice_gender_pref') || 'auto');
   function toggleGender() {
     const next = voiceGender === 'auto' ? 'female' : voiceGender === 'female' ? 'male' : 'auto';
     setVoiceGender(next);
@@ -551,9 +457,7 @@ export default function Chat() {
     try {
       const token = await getValidToken();
       await speak({ text, voiceId, lang: getLangCode(lang, dialect), dialect, accessToken: token, slow: slowMode });
-    } finally {
-      setSpeakingId(null);
-    }
+    } finally { setSpeakingId(null); }
   }
 
   function handleWordSaved(word, didSave) {
@@ -564,11 +468,7 @@ export default function Chat() {
 
   function handleLoop(text) {
     if (loopRef.current) {
-      clearTimeout(loopRef.current);
-      loopRef.current = null;
-      stopAudio();
-      setLoopingId(null);
-      return;
+      clearTimeout(loopRef.current); loopRef.current = null; stopAudio(); setLoopingId(null); return;
     }
     const msgId = messages.find(m => m.role === 'ai' && m.text === text)?.id || null;
     setLoopingId(msgId);
@@ -581,20 +481,14 @@ export default function Chat() {
   }
 
   async function handleTranslate(msgId, text) {
-    if (translations[msgId]) {
-      setTranslations(t => { const n = { ...t }; delete n[msgId]; return n; });
-      return;
-    }
+    if (translations[msgId]) { setTranslations(t => { const n = { ...t }; delete n[msgId]; return n; }); return; }
     try {
       const token = await getValidToken();
       const headers = { 'Content-Type': 'application/json' };
       if (token) headers['Authorization'] = `Bearer ${token}`;
       const res = await fetch(`${WORKER_URL}/api/chat`, {
         method: 'POST', headers,
-        body: JSON.stringify({
-          model: 'claude-haiku-4-5-20251001', max_tokens: 150,
-          messages: [{ role: 'user', content: `Translate this to English in one natural sentence. Return ONLY the translation, nothing else:\n"${text}"` }],
-        }),
+        body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 150, messages: [{ role: 'user', content: `Translate this to English in one natural sentence. Return ONLY the translation, nothing else:\n"${text}"` }] }),
       });
       const data = await res.json();
       const translated = (data.content?.[0]?.text || '').trim();
@@ -607,7 +501,6 @@ export default function Chat() {
     const ctrl = new AbortController();
     abortRef.current = ctrl;
     setIsSending(true);
-
     setMessages(prev => [...prev, { role: 'typing', id: Date.now() }]);
 
     let msgs, system;
@@ -643,13 +536,7 @@ RULES:
     try {
       const validToken = await getValidToken();
       const apiKey = localStorage.getItem('perin_api_key') || '';
-
-      const endpoint = validToken
-        ? `${WORKER_URL}/api/chat`
-        : apiKey
-        ? 'https://api.anthropic.com/v1/messages'
-        : `${WORKER_URL}/api/chat`;
-
+      const endpoint = validToken ? `${WORKER_URL}/api/chat` : apiKey ? 'https://api.anthropic.com/v1/messages' : `${WORKER_URL}/api/chat`;
       const reqHeaders = { 'Content-Type': 'application/json' };
       if (apiKey && !validToken) {
         reqHeaders['anthropic-version'] = '2023-06-01';
@@ -660,9 +547,7 @@ RULES:
       }
 
       const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: reqHeaders,
-        signal: ctrl.signal,
+        method: 'POST', headers: reqHeaders, signal: ctrl.signal,
         body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 700, stream: true, system, messages: msgs }),
       });
 
@@ -671,16 +556,12 @@ RULES:
         let errText = 'AI error. Try again.';
         if (res.status === 429) errText = 'Too many messages — wait a moment.';
         else if (res.status === 401) {
-          // Token expired — clear auth and redirect to welcome
           localStorage.removeItem('perin_auth');
           dispatch({ type: 'SET_USER', payload: null });
           navigate('/welcome', { replace: true });
           return;
         }
-        // Report unexpected server errors
-        if (res.status >= 500) {
-          reportCrash('api_error', `HTTP ${res.status} from /api/chat`, { lang, dialect, level });
-        }
+        if (res.status >= 500) reportCrash('api_error', `HTTP ${res.status} from /api/chat`, { lang, dialect, level });
         setMessages(prev => [...prev, { role: 'error', text: errText, id: Date.now() }]);
         return;
       }
@@ -726,19 +607,28 @@ RULES:
 
       historyRef.current.push({ role: 'assistant', content: fullText });
 
+      // ── Parse and dispatch grammar corrections ──
+      if (!isInit) {
+        const corrections = parseGrammarCorrections(fullText);
+        corrections.forEach(({ correction, original, explanation }) => {
+          dispatch({ type: 'ADD_GRAMMAR_ERROR', payload: { correction, original, explanation, lang } });
+        });
+      }
+
+      const { mainText: parsed, chips, shadow } = parseRetention(mainText);
+
+      // Update shadow ref so next STT result can score against it
+      if (shadow) lastShadowRef.current = shadow;
+
       setMessages(prev => {
         const filtered = prev.filter(m => m.role !== 'typing' && m.role !== 'streaming');
-        const { mainText: parsed, chips, shadow } = parseRetention(mainText);
         return [...filtered, { role: 'ai', text: parsed, chips, shadow, grammarNote, id: Date.now(), raw: mainText, isOpening: isInit }];
       });
 
       scrollToBottom();
 
       if (isInit && level === 'beginner' && mode !== 'freechat' && !parseOpeningMessage(fullText).phraseTarget) {
-        setTimeout(() => {
-          setMessages(prev => prev.filter(m => !m.isOpening));
-          callClaude(true);
-        }, 500);
+        setTimeout(() => { setMessages(prev => prev.filter(m => !m.isOpening)); callClaude(true); }, 500);
         return;
       }
 
@@ -802,17 +692,15 @@ RULES:
     dispatch({
       type: 'ADD_SESSION',
       payload: {
-        id: Date.now(),
-        date: new Date().toISOString(),
+        id: Date.now(), date: new Date().toISOString(),
         lang, dialect, level,
         scenario: scenario?.title || 'Free Chat',
-        messages: msgCount,
-        duration,
+        messages: msgCount, duration,
         xp: Math.min((scenario?.xp || 50) + (msgCount * 3), 200),
       },
     });
 
-    // Save key phrases from this session to perin_moments
+    // ── Save key phrases to perin_moments + push to vocab SRS ──
     try {
       const keyPhrases = [];
       historyRef.current.forEach(m => {
@@ -823,8 +711,7 @@ RULES:
             const mn = meaning.trim();
             if (p && mn && p.length < 80) keyPhrases.push({ phrase: p, meaning: mn });
           });
-          const tryMatch = (m.content || '').match(/Try saying[^"]*"([^"]+)"/i);
-          if (tryMatch) keyPhrases.push({ phrase: tryMatch[1].trim(), meaning: '' });
+          // Skip Try saying phrases — no meaning, pollutes SRS
         }
       });
       if (keyPhrases.length > 0) {
@@ -834,21 +721,24 @@ RULES:
           scenario: scenario?.title || 'Free Chat',
           date: new Date().toISOString(),
         }));
-        // Keep last 100 moments, deduplicate by phrase
         const merged = [...newMoments, ...existing];
         const seen = new Set();
         const deduped = merged.filter(m => { const k = m.phrase.toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true; });
         localStorage.setItem('perin_moments', JSON.stringify(deduped.slice(0, 100)));
 
-        // Fire-and-forget sync to Supabase (cross-device support)
+        // ── Push to SRS vocab queue ──
+        keyPhrases.forEach(({ phrase, meaning }) => {
+          saveWordToVocab(phrase, meaning, lang);
+        });
+
+        // ── Fire-and-forget Supabase sync ──
         getValidToken().then(token => {
           if (!token) return;
           const rows = newMoments.map(p => ({
             phrase: p.phrase,
             phrase_norm: p.phrase.toLowerCase().replace(/\s+/g, ' ').trim(),
             translation: p.meaning || null,
-            lang,
-            dialect,
+            lang, dialect,
             source_scenario: scenario?.title || 'Free Chat',
           }));
           fetch(`${WORKER_URL}/api/memory`, {
@@ -858,17 +748,13 @@ RULES:
           }).catch(() => {});
         }).catch(() => {});
       }
-    } catch {}
+    } catch { /* silent */ }
 
     const baseXP = Math.min((scenario?.xp || 50) + (msgCount * 3), 200);
     navigate('/summary', {
       state: {
-        xpEarned: baseXP,
-        duration,
-        messages: msgCount,
-        lang, dialect, level,
-        scenario,
-        idx,
+        xpEarned: baseXP, duration, messages: msgCount,
+        lang, dialect, level, scenario, idx,
         flag: state.activeLang?.flag || '',
         history: historyRef.current.slice(-30),
       },
@@ -880,15 +766,28 @@ RULES:
   async function handleMic() {
     if (isRecording) { stopRecording(); return; }
     const token = await getValidToken();
-    // Get last AI message as Whisper prompt hint
     const lastAi = [...messages].reverse().find(m => m.role === 'ai');
     const hint = lastAi ? (lastAi.text || '').slice(0, 200) : '';
     startRecording({
-      lang: lang, // use base language not dialect — Whisper doesn't support dialect codes
+      lang,
       accessToken: token,
       hint,
-      // Show transcription in input box so user can review/edit before sending
-      onResult: (t) => setInput(t),
+      onResult: (t) => {
+        setInput(t);
+
+        // ── Pronunciation feedback ──
+        const shadow = lastShadowRef.current;
+        if (shadow) {
+          const score = scorePronunciation(t, shadow);
+          if (score) {
+            const toastMsg = score === 'great'
+              ? `🎯 Great pronunciation!`
+              : `👌 Close — keep practicing: "${shadow}"`;
+            setPronunciationToast(toastMsg);
+            setTimeout(() => setPronunciationToast(null), 3000);
+          }
+        }
+      },
       onError: (e) => console.error(e),
     });
   }
@@ -921,17 +820,11 @@ RULES:
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <button
-              onClick={toggleGender}
-              title={`Voice: ${voiceGender}`}
-              style={{ background: 'none', border: '1.5px solid var(--border)', borderRadius: '8px', fontFamily: "'DM Sans',sans-serif", fontSize: '.68rem', fontWeight: '600', color: 'var(--muted)', cursor: 'pointer', padding: '4px 7px', whiteSpace: 'nowrap' }}
-            >
+            <button onClick={toggleGender} title={`Voice: ${voiceGender}`} style={{ background: 'none', border: '1.5px solid var(--border)', borderRadius: '8px', fontFamily: "'DM Sans',sans-serif", fontSize: '.68rem', fontWeight: '600', color: 'var(--muted)', cursor: 'pointer', padding: '4px 7px', whiteSpace: 'nowrap' }}>
               {voiceGender === 'female' ? 'Feminine' : voiceGender === 'male' ? 'Masculine' : 'Auto'}
             </button>
             <button onClick={endSession} style={{ background: 'none', border: '1.5px solid var(--border)', borderRadius: '8px', fontFamily: "'DM Sans',sans-serif", fontSize: '.72rem', fontWeight: '600', color: 'var(--muted)', cursor: 'pointer', padding: '4px 10px', whiteSpace: 'nowrap' }}>End</button>
-            <button className="chat-menu-btn" onClick={() => setMenuOpen(o => !o)}>
-              <span></span><span></span><span></span>
-            </button>
+            <button className="chat-menu-btn" onClick={() => setMenuOpen(o => !o)}><span></span><span></span><span></span></button>
           </div>
         </div>
 
@@ -951,20 +844,13 @@ RULES:
         )}
 
         {showCultureTip && mode !== 'freechat' && scenario?.title && (
-          <CultureTipBanner
-            dialect={dialect}
-            lang={lang}
-            scenarioTitle={scenario.title}
-            onDismiss={() => setShowCultureTip(false)}
-          />
+          <CultureTipBanner dialect={dialect} lang={lang} scenarioTitle={scenario.title} onDismiss={() => setShowCultureTip(false)} />
         )}
 
         <div id="messages" ref={messagesRef}>
           {messages.map(msg => {
             if (msg.role === 'typing') return (
-              <div key={msg.id} className="ai-hero-card">
-                <div className="typing"><span></span><span></span><span></span></div>
-              </div>
+              <div key={msg.id} className="ai-hero-card"><div className="typing"><span></span><span></span><span></span></div></div>
             );
             if (msg.role === 'streaming') return (
               <div key={msg.id} className="ai-hero-card">
@@ -972,14 +858,10 @@ RULES:
               </div>
             );
             if (msg.role === 'error') return (
-              <div key={msg.id} style={{ background: 'rgba(239,68,68,.08)', border: '1px solid rgba(239,68,68,.2)', borderRadius: '12px', padding: '12px 16px', fontSize: '.84rem', color: 'var(--danger)', margin: '8px 0' }}>
-                {msg.text}
-              </div>
+              <div key={msg.id} style={{ background: 'rgba(239,68,68,.08)', border: '1px solid rgba(239,68,68,.2)', borderRadius: '12px', padding: '12px 16px', fontSize: '.84rem', color: 'var(--danger)', margin: '8px 0' }}>{msg.text}</div>
             );
             if (msg.role === 'user') return (
-              <div key={msg.id} className="msg user">
-                <div className="bubble">{msg.text}</div>
-              </div>
+              <div key={msg.id} className="msg user"><div className="bubble">{msg.text}</div></div>
             );
             if (msg.role === 'ai') {
               if (msg.isOpening) return <OpeningMessage key={msg.id} msg={msg} level={level} lang={lang} onPlay={(t) => speakMessage(t, msg.id)} onLoop={handleLoop} onTranslate={handleTranslate} onSave={handleWordSaved} looping={loopingId === msg.id} translation={translations[msg.id]} speaking={speakingId === msg.id} />;
@@ -990,13 +872,14 @@ RULES:
         </div>
 
         {saveToast && (
-          <div style={{
-            position: 'absolute', bottom: 80, left: '50%', transform: 'translateX(-50%)',
-            background: '#2e7d32', color: '#fff', borderRadius: 20, padding: '8px 18px',
-            fontSize: '.8rem', fontWeight: 600, whiteSpace: 'nowrap', zIndex: 60,
-            animation: 'fadeUp .2s ease',
-          }}>
+          <div style={{ position: 'absolute', bottom: 80, left: '50%', transform: 'translateX(-50%)', background: '#2e7d32', color: '#fff', borderRadius: 20, padding: '8px 18px', fontSize: '.8rem', fontWeight: 600, whiteSpace: 'nowrap', zIndex: 60, animation: 'fadeUp .2s ease' }}>
             ✅ "{saveToast.word}" saved to vocab
+          </div>
+        )}
+
+        {pronunciationToast && (
+          <div style={{ position: 'absolute', bottom: saveToast ? 116 : 80, left: '50%', transform: 'translateX(-50%)', background: 'var(--accent)', color: '#fff', borderRadius: 20, padding: '8px 18px', fontSize: '.8rem', fontWeight: 600, whiteSpace: 'nowrap', zIndex: 60, animation: 'fadeUp .2s ease', maxWidth: '80vw', textAlign: 'center' }}>
+            {pronunciationToast}
           </div>
         )}
 
@@ -1016,30 +899,12 @@ RULES:
         <div className="input-area">
           <div className="input-row">
             <button className={`plus-btn${actionsOpen ? ' open' : ''}`} onClick={() => setActionsOpen(o => !o)}>+</button>
-            <textarea
-              ref={inputRef}
-              id="user-input"
-              placeholder="Type your reply…"
-              style={{ fontSize: '16px' }}
-              rows={1}
-              value={input}
-              onChange={e => setInput(e.target.value)}
-              onKeyDown={handleKey}
-            />
+            <textarea ref={inputRef} id="user-input" placeholder="Type your reply…" style={{ fontSize: '16px' }} rows={1} value={input} onChange={e => setInput(e.target.value)} onKeyDown={handleKey} />
             <button
               className={`slow-btn${slowMode ? ' active' : ''}`}
               onClick={() => setSlowMode(s => !s)}
               title={slowMode ? 'Slow mode on' : 'Slow mode off'}
-              style={{
-                background: slowMode ? 'var(--accent)' : 'transparent',
-                border: '1.5px solid ' + (slowMode ? 'var(--accent)' : 'var(--border)'),
-                borderRadius: '50%',
-                width: 38, height: 38,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: '1.1rem', cursor: 'pointer', flexShrink: 0,
-                color: slowMode ? '#fff' : 'var(--muted)',
-                transition: 'all .2s',
-              }}
+              style={{ background: slowMode ? 'var(--accent)' : 'transparent', border: '1.5px solid ' + (slowMode ? 'var(--accent)' : 'var(--border)'), borderRadius: '50%', width: 38, height: 38, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', cursor: 'pointer', flexShrink: 0, color: slowMode ? '#fff' : 'var(--muted)', transition: 'all .2s' }}
             >🐢</button>
             <button className={`mic-btn${isRecording ? ' listening' : ''}`} onClick={handleMic}>
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">

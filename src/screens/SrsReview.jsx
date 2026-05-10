@@ -54,7 +54,7 @@ function markMissionDoneIfMatch(types) {
 export default function MyWords() {
   const { state, dispatch } = useApp();
   const navigate = useNavigate();
-  const [tab, setTab] = useState('collection'); // 'collection' | 'review'
+  const [tab, setTab] = useState('collection');
 
   return (
     <div className="screen active" style={{ alignItems: 'center', padding: '28px 16px 60px' }}>
@@ -66,7 +66,7 @@ export default function MyWords() {
 
         {/* Tabs */}
         <div style={{ display: 'flex', borderBottom: '2px solid var(--border)', marginBottom: 20 }}>
-          {[['collection', 'Collection'], ['review', 'Review']].map(([key, label]) => (
+          {[['collection', 'Collection'], ['review', 'Review'], ['grammar', 'Grammar']].map(([key, label]) => (
             <button
               key={key}
               onClick={() => setTab(key)}
@@ -85,6 +85,78 @@ export default function MyWords() {
 
         {tab === 'collection' && <CollectionTab state={state} navigate={navigate} onStartReview={() => setTab('review')} />}
         {tab === 'review' && <ReviewTab state={state} dispatch={dispatch} navigate={navigate} />}
+        {tab === 'grammar' && <GrammarTab state={state} dispatch={dispatch} />}
+      </div>
+    </div>
+  );
+}
+
+// ── GRAMMAR TAB ───────────────────────────────────────────────────────────────
+function GrammarTab({ state, dispatch }) {
+  const errors = (state.grammarErrors || [])
+    .slice()
+    .sort((a, b) => b.count - a.count);
+
+  const lang = state.activeLang?.lang || state.languages?.[0]?.lang || '';
+  const filtered = lang ? errors.filter(e => !e.lang || e.lang === lang) : errors;
+
+  function handleDismiss(correction, errLang) {
+    // Remove by dispatching a reset for just this entry via filter
+    // We don't have a REMOVE_GRAMMAR_ERROR action — use SET directly via localStorage
+    try {
+      const current = JSON.parse(localStorage.getItem('perin_grammar_errors') || '[]');
+      const updated = current.filter(e => !(e.correction === correction && e.lang === errLang));
+      localStorage.setItem('perin_grammar_errors', JSON.stringify(updated));
+      // Force re-read by dispatching a no-op that triggers re-render via state
+      dispatch({ type: 'SET_PROFILE', payload: {} });
+    } catch { /* silent */ }
+  }
+
+  if (filtered.length === 0) {
+    return (
+      <div style={{ background: 'var(--card)', border: '1.5px solid var(--border)', borderRadius: 14, padding: '24px 20px', textAlign: 'center' }}>
+        <div style={{ fontSize: '2rem', marginBottom: 8 }}>✅</div>
+        <p style={{ fontWeight: 600, fontSize: '.9rem', marginBottom: 6 }}>No grammar patterns tracked yet</p>
+        <p style={{ color: 'var(--muted)', fontSize: '.82rem', lineHeight: 1.6 }}>
+          When the AI corrects you, the pattern gets logged here so you can spot what to work on.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <p style={{ fontSize: '.78rem', color: 'var(--muted)', marginBottom: 14, lineHeight: 1.5 }}>
+        Patterns the AI has corrected — sorted by how often they come up.
+      </p>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {filtered.map((e, i) => (
+          <div key={i} style={{ background: 'var(--card)', border: '1.5px solid var(--border)', borderRadius: 12, padding: '13px 14px' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5, flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '.78rem', background: '#fce8e8', color: '#c62828', borderRadius: 6, padding: '2px 8px', fontWeight: 600, textDecoration: 'line-through' }}>{e.original}</span>
+                  <span style={{ fontSize: '.75rem', color: 'var(--muted)' }}>→</span>
+                  <span style={{ fontSize: '.78rem', background: '#e8f5e9', color: '#2e7d32', borderRadius: 6, padding: '2px 8px', fontWeight: 600 }}>{e.correction}</span>
+                </div>
+                {e.explanation && (
+                  <p style={{ fontSize: '.75rem', color: 'var(--muted)', lineHeight: 1.5, margin: 0 }}>{e.explanation}</p>
+                )}
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
+                <span style={{ fontSize: '.65rem', fontWeight: 700, color: e.count >= 3 ? '#ef4444' : e.count >= 2 ? '#f59e0b' : 'var(--muted)', background: e.count >= 3 ? 'rgba(239,68,68,.1)' : e.count >= 2 ? 'rgba(245,158,11,.1)' : 'var(--cream)', borderRadius: 6, padding: '2px 7px' }}>
+                  ×{e.count}
+                </span>
+                <button
+                  onClick={() => handleDismiss(e.correction, e.lang)}
+                  style={{ background: 'none', border: 'none', color: 'var(--muted)', fontSize: '.65rem', cursor: 'pointer', padding: 0, fontFamily: "'DM Sans',sans-serif" }}
+                >
+                  dismiss
+                </button>
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -96,7 +168,7 @@ function SessionMoments({ lang }) {
   const [expanded, setExpanded] = React.useState(false);
 
   React.useEffect(() => {
-    // 1. Load localStorage immediately so the UI isn't blank
+    // 1. Load localStorage immediately
     try {
       const all = JSON.parse(localStorage.getItem('perin_moments') || '[]');
       const filtered = lang ? all.filter(m => !m.lang || m.lang === lang) : all;
@@ -117,19 +189,16 @@ function SessionMoments({ lang }) {
         const cloudData = await res.json();
         if (!Array.isArray(cloudData) || cloudData.length === 0) return;
         const fromCloud = cloudData.map(m => ({
-          phrase:   m.phrase,
-          meaning:  m.translation || '',
-          lang:     m.lang,
-          dialect:  m.dialect || '',
-          scenario: m.source_scenario || '',
-          date:     m.created_at || '',
+          phrase: m.phrase, meaning: m.translation || '',
+          lang: m.lang, dialect: m.dialect || '',
+          scenario: m.source_scenario || '', date: m.created_at || '',
         }));
         setMoments(prev => {
           const seen = new Set(prev.map(m => m.phrase.toLowerCase()));
           const newOnes = fromCloud.filter(m => !seen.has(m.phrase.toLowerCase()));
           return newOnes.length > 0 ? [...prev, ...newOnes] : prev;
         });
-      } catch { /* silent — cloud pull is best-effort */ }
+      } catch { /* silent */ }
     })();
   }, [lang]);
 
@@ -146,7 +215,6 @@ function SessionMoments({ lang }) {
   }
 
   const shown = expanded ? moments : moments.slice(0, 5);
-
   return (
     <div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
@@ -161,10 +229,7 @@ function SessionMoments({ lang }) {
         ))}
       </div>
       {moments.length > 5 && (
-        <button
-          onClick={() => setExpanded(e => !e)}
-          style={{ background: 'none', border: 'none', color: 'var(--accent)', fontSize: '.8rem', fontWeight: 600, cursor: 'pointer', marginTop: 8, padding: 0 }}
-        >
+        <button onClick={() => setExpanded(e => !e)} style={{ background: 'none', border: 'none', color: 'var(--accent)', fontSize: '.8rem', fontWeight: 600, cursor: 'pointer', marginTop: 8, padding: 0 }}>
           {expanded ? 'Show less' : `Show all ${moments.length} phrases`}
         </button>
       )}
@@ -176,14 +241,12 @@ function CollectionTab({ state, navigate, onStartReview }) {
   const lang = state.activeLang?.lang || state.languages?.[0]?.lang || '';
   const vocab = loadVocab().filter(v => !v.lang || v.lang === lang);
   const due = getDueWords(vocab);
-
   const mastered   = vocab.filter(m => (m.strength || 0) >= 3);
   const inProgress = vocab.filter(m => (m.strength || 0) > 0 && (m.strength || 0) < 3);
   const newOnes    = vocab.filter(m => (m.strength || 0) === 0);
 
   return (
     <div>
-      {/* Stats */}
       {vocab.length > 0 && (
         <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
           {[
@@ -199,7 +262,6 @@ function CollectionTab({ state, navigate, onStartReview }) {
         </div>
       )}
 
-      {/* Saved words */}
       <div style={{ fontSize: '.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.12em', color: 'var(--muted)', marginBottom: 10 }}>
         💾 Saved words
       </div>
@@ -220,7 +282,6 @@ function CollectionTab({ state, navigate, onStartReview }) {
           <WordGroup title="Mastered" emoji="⭐" items={mastered} />
           <WordGroup title="In progress" emoji="🔄" items={inProgress} />
           <WordGroup title="New" emoji="🌱" items={newOnes} />
-
           {due.length > 0 && (
             <button onClick={onStartReview} style={{ width: '100%', background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 12, padding: '12px', fontFamily: "'DM Sans',sans-serif", fontSize: '.88rem', fontWeight: 600, cursor: 'pointer', marginTop: 8, marginBottom: 20 }}>
               🔁 Review {due.length} due word{due.length !== 1 ? 's' : ''} →
@@ -229,7 +290,6 @@ function CollectionTab({ state, navigate, onStartReview }) {
         </>
       )}
 
-      {/* From sessions */}
       <div style={{ fontSize: '.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.12em', color: 'var(--muted)', marginBottom: 10, marginTop: 8 }}>
         💬 From sessions
       </div>
@@ -331,12 +391,10 @@ function ReviewTab({ state, dispatch, navigate }) {
     if (result === 'correct') { updated = applyCorrect(v); setCorrect(c => c + 1); }
     else if (result === 'almost') { updated = applyAlmost(v); }
     else { updated = applyWrong(v); }
-
     const all = loadVocab();
     const idx = all.findIndex(sv => sv.word === v.word && sv.lang === v.lang);
     if (idx !== -1) all[idx] = updated;
     saveVocab(all);
-
     const nextIndex = index + 1;
     if (nextIndex >= queue.length) {
       const finalCorrect = result === 'correct' ? correct + 1 : correct;
