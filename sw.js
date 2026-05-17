@@ -1,5 +1,5 @@
 // public/sw.js — Perin Service Worker v3
-const CACHE_VERSION = 'perin-17790414021779054985';
+const CACHE_VERSION = 'perin-17790414021779055072';
 const CACHE_NAME = CACHE_VERSION;
 
 const PRECACHE_URLS = [
