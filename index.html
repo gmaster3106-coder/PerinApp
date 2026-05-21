@@ -1,6 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <script>
+    (function() {
+      var p = window.location.search.match(/[?<head>]p=([^<head>]+)/);
+      if (p) {
+        window.history.replaceState(null, null,
+          decodeURIComponent(p[1]) + (window.location.search.match(/[?&]q=([^<head>]+)/) ? decodeURIComponent(window.location.search.match(/[?&]q=([^<head>]+)/)[1]) : ""));
+      }
+    })();
+  </script>
     <link rel="manifest" href="/manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -22,11 +31,10 @@
 <link rel="icon" type="image/png" href="/icon-192.png">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"/>
 <title>Perin</title>
-  <script type="module" crossorigin src="/assets/index-CU0AcNco.js"></script>
+  <script type="module" crossorigin src="/assets/index-DoRtBZas.js"></script>
   <link rel="stylesheet" crossorigin href="/assets/index-D4K6K8gI.css">
 </head>
 <body>
 <div id="root"></div>
 </body>
 </html>
-<!-- refresh -->
