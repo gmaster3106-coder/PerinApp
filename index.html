@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script>
+    (function() {
+      var p = window.location.search.match(/[?<head>]p=([^<head>]+)/);
+      if (p) {
+        window.history.replaceState(null, null,
+          decodeURIComponent(p[1]) + (window.location.search.match(/[?&]q=([^<head>]+)/) ? decodeURIComponent(window.location.search.match(/[?&]q=([^<head>]+)/)[1]) : ""));
+      }
+    })();
+  </script>
+    <link rel="manifest" href="/manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Perin">
+    <link rel="apple-touch-icon" href="/icon-192.png">
+<meta charset="UTF-8" />
+<meta name="description" content="Perin — immersive AI language tutor. Real conversations in Spanish, French, Italian, Portuguese, and Haitian Creole. Speak like a local from day one.">
+<meta name="theme-color" content="#0f1f3d">
+<meta name="robots" content="index, follow">
+<meta property="og:title" content="Perin — Speak Like a Local">
+<meta property="og:description" content="Real AI conversations in 13 dialects. Not flashcards. Not scripts. Actual speaking practice.">
+<meta property="og:image" content="https://speakperin.com/icon-512.png">
+<meta property="og:url" content="https://speakperin.com/">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Perin — Speak Like a Local">
+<meta name="twitter:description" content="Real AI conversations in 13 dialects. Not flashcards. Not scripts.">
+<meta name="twitter:image" content="https://speakperin.com/icon-512.png">
+<link rel="icon" type="image/png" href="/icon-192.png">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"/>
+<title>Perin</title>
+  <script type="module" crossorigin src="/assets/index-D63mJdya.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-dteJNOpX.css">
+</head>
+<body>
+<div id="root"></div>
+</body>
+</html>
