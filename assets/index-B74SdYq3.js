@@ -358,7 +358,7 @@ ${je.map(ve=>`- ${ve.word}: ${ve.meaning}`).join(`
 
 MENTAL ANCHORS: Connect new vocabulary to what this learner cares about: `+Ge.join(", ")+". Tie new words to their context.":"";return`
 
-CRITICAL: Always complete your sentences fully. Never end a response mid-sentence, mid-word, or mid-thought. If you are running long, finish the current sentence and stop — do not trail off.`+K+ke+Se+lt+`
+CRITICAL: Always complete your sentences fully. Never end a response mid-sentence, mid-word, or mid-thought. If you are running long, finish the current sentence and stop — do not trail off.`+K+ke+struggleDetectionNote+goalClosureNote+milestoneNote+Se+lt+`
 
 VOCABULARY DISCOVERY (critical): When the learner can't remember a word or asks for one, NEVER give it directly. Guide them to discover it through progressive hints:
 1. First hint: describe what the thing does or when you use it. ("What do you use when it rains?")
