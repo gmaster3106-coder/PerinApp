@@ -316,17 +316,21 @@ RECURRING MISTAKES (engineer natural situations that target these — don't anno
 ${be.map(J=>`- "${J.original}" → correct form: "${J.correction}" (${J.count} times). ${J.explanation||""}`).join(`
 `)}`:"",fe=(t||[]).filter(J=>(!J.lang||J.lang===d)&&J.savedAt&&Date.now()-J.savedAt>3*24*60*60*1e3).slice(-5),O=`
 
-COACHING SYSTEM — follow these in priority order:
+COACHING SYSTEM — this is your most important instruction set:
 
-1. WORD DISCOVERY: When the learner can't remember a word, never give it. Hint ladder: (a) describe what it does — "What do you use when it rains?", (b) physical clue — "It's something you carry", (c) first letter — "Starts with 'p'". Only give it after all 3 fail, then use it in a sentence immediately.
+STEP 1 — PICK YOUR DRILL WORDS: In your opening message, mentally identify 2-3 specific words the learner WILL need for this scenario. These are your drill words for the session. You will return to them repeatedly.
 
-2. REPETITION: After introducing a 🔑 word, count 2-3 exchanges then engineer a situation where the learner must use it — don't ask directly, just make it the natural answer. If they use it correctly, acknowledge it briefly: "¡Ahí está!" then move on.
+STEP 2 — MODEL FIRST: Use each drill word naturally in your own sentence before ever asking the learner to produce it. Mark it with 🔑. Do this in the first 2 exchanges.
 
-3. STRUGGLE DETECTION: If the learner sends 3+ replies of 1-2 words or keeps switching to English, they're stuck. Slow down, simplify, add more support. Don't wait for them to ask.
+STEP 3 — DRILL: After the learner has seen a word once, engineer a situation 2 exchanges later where they MUST produce it. Don't say 'use this word' — just ask a question that can only be answered with it. If they get it right: '¡Ahí está!' and continue. If they forget: hint ladder — (a) what it means, (b) first letter. Only give it after 2 failed hints.
 
-4. MILESTONES: When the learner does something genuinely notable — first correct subjunctive, full exchange without English, correct use of a previously wrong word — name it specifically: "That's the first time you used that naturally." One line, then continue.
+STEP 4 — REPEAT THE DRILL: Return to each drill word AT LEAST TWICE in the session. The second time, don't model it — just create the situation and see if they remember. This is the learning.
 
-5. GOAL CLOSURE: At session end, confirm whether the opening goal was achieved: "You did it — you [what they accomplished]." One sentence, specific, then [SCENARIO_COMPLETE].`,ae=fe.length>0?`
+STEP 5 — STRUGGLE DETECTION: If the learner sends 3+ replies of 1-2 words or keeps switching to English, slow down and simplify immediately.
+
+STEP 6 — MILESTONES: When they use a drill word correctly without prompting, name it: 'That's the first time you used that on your own.'
+
+STEP 7 — GOAL CLOSURE: At session end, confirm the goal was achieved and list the words they drilled today. Then [SCENARIO_COMPLETE].`,ae=fe.length>0?`
 
 VOCAB RE-ENTRY (these words were saved 3+ days ago — weave them back into conversation naturally, don't announce it, just use them in your sentences and create moments where the learner needs to respond with them):
 ${fe.map(J=>`- ${J.word}: ${J.meaning}`).join(`
