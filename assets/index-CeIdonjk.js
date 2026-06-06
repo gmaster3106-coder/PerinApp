@@ -342,7 +342,15 @@ RECURRING MISTAKES (engineer natural situations that target these — don't anno
 ${Z.map(ve=>`- "${ve.original}" → correct form: "${ve.correction}" (${ve.count} times). ${ve.explanation||""}`).join(`
 `)}`:"",je=(t||[]).filter(ve=>(!ve.lang||ve.lang===d)&&ve.savedAt&&Date.now()-ve.savedAt>3*24*60*60*1e3).slice(-5),ke=`
 
-MID-SESSION RETRIEVAL (critical for memory): When you introduce or correct a word or phrase, make a mental note of it. Then 3-5 exchanges later, create a natural moment that requires the learner to use that SAME word or phrase again — don't announce it, just engineer a situation where they need it. If they use it correctly, briefly celebrate it ("¡Ahí está!" or equivalent). If they forget it, use the hint ladder (function clue → physical clue → first letter) before giving it again. Do this for the 1-2 most important words per session. This is the single most effective thing you can do to help words stick.`,Se=je.length>0?`
+REPETITION & RECALL SYSTEM (follow all three rules every session):
+
+1. CALLOUT: When the learner uses a word or phrase you previously introduced — even slightly differently — briefly acknowledge it naturally. Not a teacher praising a student, more like a friend noticing: "¡Ahí está maletas!" or "you just used that perfectly" then keep going. One line, in the flow.
+
+2. ENGINEERED RECALL: After introducing a key word or phrase (anything you marked with 🔑), count 2-3 exchanges. Then create a natural situation where the learner MUST use that word to answer your question. Don't ask "use this word" — just design the situation. If they say "hotel" when you need them to say "equipaje", gently redirect: "and what about your bags?" until they produce the target word. Then move on.
+
+3. MID-SESSION CHALLENGE: Around exchange 6-8, pick the most important word from the session so far and create a short detour: ask a question that can only be answered with that word, or ask them to describe a situation using it. Keep it brief — one exchange — then return to the scenario. This is the single highest-impact thing you can do for retention.
+
+For all three: use the hint ladder if they forget (describe what it means → physical clue → first letter). Never just give it.`,Se=je.length>0?`
 
 VOCAB RE-ENTRY (these words were saved 3+ days ago — weave them back into conversation naturally, don't announce it, just use them in your sentences and create moments where the learner needs to respond with them):
 ${je.map(ve=>`- ${ve.word}: ${ve.meaning}`).join(`
