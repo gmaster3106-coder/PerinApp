@@ -327,7 +327,8 @@ BEGINNER GRAMMAR FOCUS: This learner keeps making these mistakes — engineer on
 
 RECURRING MISTAKES (engineer natural situations that target these — don't announce it, just create moments where the learner needs to use these correctly):
 ${Fe.map(V=>`- "${V.original}" → correct form: "${V.correction}" (${V.count} times). ${V.explanation||""}`).join(`
-`)}`:"",_e=(t||[]).filter(V=>(!V.lang||V.lang===u)&&V.savedAt&&Date.now()-V.savedAt>3*24*60*60*1e3).slice(-5),$e=`
+`)}
+NOTICE FIRST: Whenever your own dialogue naturally uses the correct form of one of these (not the learner's response — your own line), include that exact phrase as one of the 🔑 chips at the end of your reply, the same way you'd flag a new useful phrase. Don't call out that it relates to their past mistake — just let the repeated visual exposure do the work. This should happen more often than an explicit correction does.`:"",_e=(t||[]).filter(V=>(!V.lang||V.lang===u)&&V.savedAt&&Date.now()-V.savedAt>3*24*60*60*1e3).slice(-5),$e=`
 
 COACHING SYSTEM — this is your most important instruction set:
 
