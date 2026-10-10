@@ -1,1 +1,0 @@
-function n(e,t,a){return`perin_taskdone_${new Date().toDateString()}_${t||""}_${a||""}_${e}`}function r(...e){let t={};try{t=JSON.parse(localStorage.getItem("perin_task_ctx")||"{}")}catch{}e.forEach(a=>{try{localStorage.setItem(n(a,t.lang,t.dialect),"1")}catch{}})}export{r as markTaskTypeDone,n as taskDoneKey};
