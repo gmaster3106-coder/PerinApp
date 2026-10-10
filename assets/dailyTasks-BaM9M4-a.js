@@ -1,0 +1,1 @@
+import{m as r}from"./featureDiscovery-DY2_hUnl.js";function o(e,t,a){return`perin_taskdone_${new Date().toDateString()}_${t||""}_${a||""}_${e}`}function c(...e){let t={};try{t=JSON.parse(localStorage.getItem("perin_task_ctx")||"{}")}catch{}e.forEach(a=>{try{localStorage.setItem(o(a,t.lang,t.dialect),"1")}catch{}}),r(...e)}export{c as markTaskTypeDone,o as taskDoneKey};
