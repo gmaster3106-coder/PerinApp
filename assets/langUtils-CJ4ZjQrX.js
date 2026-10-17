@@ -1,0 +1,1 @@
+import{a as e,i as t}from"./getValidToken-Bf2gnqZp.js";function n(n,r){return t[r]||e[n]||`es-ES`}export{n as t};
