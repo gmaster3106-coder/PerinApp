@@ -1,1 +1,0 @@
-import{b as e}from"./index-BYRtA2Vb.js";var t=class extends e{async show(e){}async hide(e){}};export{t as SplashScreenWeb};
