@@ -1,0 +1,1 @@
+import{n as e}from"./featureDiscovery-CjqjuDnB.js";function t(e,t,n){return`perin_taskdone_${new Date().toDateString()}_${t||``}_${n||``}_${e}`}function n(...n){let r={};try{r=JSON.parse(localStorage.getItem(`perin_task_ctx`)||`{}`)}catch{}n.forEach(e=>{try{localStorage.setItem(t(e,r.lang,r.dialect),`1`)}catch{}}),e(...n)}export{n as markTaskTypeDone};
