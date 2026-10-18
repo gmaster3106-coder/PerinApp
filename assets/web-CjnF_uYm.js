@@ -1,0 +1,1 @@
+import{b as e}from"./index-N8dVp-ez.js";var t=class extends e{async show(e){}async hide(e){}};export{t as SplashScreenWeb};
