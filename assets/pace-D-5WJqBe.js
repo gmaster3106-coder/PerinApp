@@ -1,1 +1,0 @@
-var e={zero:`Slow and simple`,beginner:`Slow and simple`,intermediate:`Everyday pace`,advanced:`Natural, with slang`,native:`Like a local`};function t(t){return e[String(t||`beginner`).split(`-`)[0]]||e.beginner}export{t};
