@@ -1,0 +1,1 @@
+import{M as e}from"./index-JLp6i-Vs.js";var t=class extends e{async show(e){}async hide(e){}};export{t as SplashScreenWeb};
