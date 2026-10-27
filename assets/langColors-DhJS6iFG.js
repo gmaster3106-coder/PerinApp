@@ -1,1 +1,0 @@
-var e={Spanish:`#D9714E`,French:`#7C98C9`,Italian:`#7A9B5C`,Portuguese:`#3D7EA6`,Creole:`#D4A24C`,"Haitian Creole":`#D4A24C`},t=new Set([`Creole`,`Haitian Creole`]);function n(n,r){let i=e[n];if(i)return r?{background:i,borderColor:i,"--chip-text":t.has(n)?`#2a1e05`:`#fff`}:{background:`${i}1f`,borderColor:`${i}66`,"--chip-label":i}}export{n,e as t};
