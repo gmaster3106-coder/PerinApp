@@ -1,1 +1,0 @@
-import{U as e}from"./index-LBA2Of6S.js";var t=class extends e{async show(e){}async hide(e){}};export{t as SplashScreenWeb};
