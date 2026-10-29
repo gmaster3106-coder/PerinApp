@@ -1,1 +1,0 @@
-import{$ as e}from"./index-CyXdVtoD.js";var t=class extends e{async show(e){}async hide(e){}};export{t as SplashScreenWeb};
