@@ -1,0 +1,1 @@
+import{$ as e}from"./index-ogSFHyr4.js";var t=class extends e{async show(e){}async hide(e){}};export{t as SplashScreenWeb};
