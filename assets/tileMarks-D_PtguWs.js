@@ -1,0 +1,1 @@
+function e(e,t,n=e=>String(e||``).toLowerCase()){let r=t.map(n),i=[...r];return e.map((e,t)=>{let a=n(e),o=i.indexOf(a);return o===-1?`off`:(i.splice(o,1),r[t]===a?``:`moved`)})}export{e as t};
