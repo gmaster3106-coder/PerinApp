@@ -1,0 +1,1 @@
+import{i as e,t}from"./react-BQ7o4F5D.js";import{on as n}from"./index-6L6QHMp9.js";var r=e(t(),1);function i(){let e=n();return(0,r.useEffect)(()=>{e(`/srs`,{replace:!0})},[]),null}export{i as default};
