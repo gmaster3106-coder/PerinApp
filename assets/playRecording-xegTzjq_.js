@@ -1,1 +1,0 @@
-function e(e){if(!e)return null;let t=new Audio(e);return t.play().catch(()=>{}),t}export{e as t};
