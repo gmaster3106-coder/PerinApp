@@ -1,0 +1,1 @@
+function e(e,t=`/dashboard`){let n=window.history.state?.idx;(typeof n==`number`?n>0:window.history.length>1)?e(-1):e(t,{replace:!0})}export{e as t};
