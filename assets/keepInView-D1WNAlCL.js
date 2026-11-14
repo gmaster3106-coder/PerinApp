@@ -1,0 +1,1 @@
+function e(){let e=document.querySelector(`.screen.active`);e?e.scrollTo({top:e.scrollHeight,behavior:`smooth`}):window.scrollTo({top:document.body.scrollHeight,behavior:`smooth`})}function t(){setTimeout(e,350);let t=window.visualViewport||window,n=()=>setTimeout(e,50);t.addEventListener(`resize`,n),setTimeout(()=>t.removeEventListener(`resize`,n),1200)}export{t};
