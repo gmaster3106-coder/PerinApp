@@ -1,0 +1,1 @@
+function e(e){let t=e?.streak||0;if(!t||!e?.lastDate)return 0;let n=new Date,r=new Date(n.getFullYear(),n.getMonth(),n.getDate()),i=new Date(e.lastDate);if(isNaN(i))return 0;let a=Math.round((r-i)/864e5);return a<=1||a===2&&(e.streakFreezes||0)>0?t:0}export{e as t};
