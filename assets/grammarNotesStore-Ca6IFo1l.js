@@ -1,1 +1,0 @@
-var e=e=>`perin_note_order_${e}`;function t(t){try{t&&!localStorage.getItem(e(t))&&localStorage.setItem(e(t),String(Date.now()))}catch{}}function n(t){try{return Number(localStorage.getItem(e(t)))||0}catch{return 0}}var r=e=>`perin_focus_next_${e}`;export{t as n,n as r,r as t};
